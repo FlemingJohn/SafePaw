@@ -24,36 +24,35 @@ const App: React.FC = () => {
             <Navbar onDashboardClick={() => setView('dashboard')} />
             <main>
               <Hero onStartClick={() => setView('dashboard')} />
-              
-              <FeatureSection 
-                id="about"
-                title="Training that brings out the best in them"
-                description="Every dog is unique, and so is our approach. We focus on positive reinforcement and clear communication to build a bond that lasts a lifetime."
-                image="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800"
+
+              <FeatureSection
+                id="report"
+                title="Report incidents in 30 seconds"
+                description="Quick incident reporting with GPS auto-detection, photo upload, and severity selection. Your reports help create safer communities and enable faster government response."
+                image="https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&q=80&w=800"
                 imageSide="left"
                 accentColor="bg-[#E9C46A]"
-                buttonText="Expert Programs"
+                buttonText="Report Now"
               />
 
-              <FeatureSection 
-                id="care"
-                title="Premium care and structured routines"
-                description="From puppy socialization to advanced obedience, our structured programs ensure your pet receives the right mental and physical stimulation every day."
-                image="https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&q=80&w=800"
+              <FeatureSection
+                id="heatmap"
+                title="Live risk heatmap for your safety"
+                description="Check risk zones before traveling. Color-coded areas show incident density, helping parents, students, and citizens make informed decisions about their routes."
+                image="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800"
                 imageSide="right"
                 accentColor="bg-[#8AB17D]"
-                buttonText="Our Process"
+                buttonText="View Heatmap"
               />
 
-              <FeatureSection 
-                id="pricing"
-                title="Join the pack with a custom plan"
-                description="We offer flexible scheduling and personalized training tracks. Whether you need in-home sessions or group workshops, we have a plan for you."
-                image="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&q=80&w=800"
+              <FeatureSection
+                id="emergency"
+                title="Emergency rabies help when you need it"
+                description="Find nearest hospitals with rabies vaccine availability, get first aid guidance, and access one-tap calling. Every second counts in an emergency."
+                image="https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800"
                 imageSide="left"
                 accentColor="bg-[#BC6C25]"
-                buttonText="View Plans"
-                price="$250/mo Starting"
+                buttonText="Emergency Help"
               />
             </main>
             <Footer />

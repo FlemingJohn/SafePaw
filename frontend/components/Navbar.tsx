@@ -28,7 +28,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-12 py-4 md:py-6 pointer-events-none">
-      <motion.div 
+      <motion.div
         initial={false}
         animate={{
           backgroundColor: scrolled ? 'rgba(45, 36, 36, 0.95)' : 'rgba(253, 251, 244, 0)',
@@ -41,7 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
         className={`max-w-7xl mx-auto flex justify-between items-center pointer-events-auto w-full`}
       >
         {/* Logo Section */}
-        <motion.div 
+        <motion.div
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           whileHover={{ scale: 1.02 }}
           className="flex items-center gap-3 cursor-pointer group"
@@ -57,9 +57,9 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
         {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center gap-10">
           {navLinks.map((link, idx) => (
-            <motion.a 
-              key={link.name} 
-              href={link.href} 
+            <motion.a
+              key={link.name}
+              href={link.href}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * idx }}
@@ -73,7 +73,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
 
         {/* Right Action Side */}
         <div className="hidden md:flex items-center gap-6">
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onDashboardClick}
@@ -82,14 +82,14 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
             <LayoutDashboard className="w-4 h-4" />
             Citizen Portal
           </motion.button>
-          
-          <motion.button 
+
+          <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             className={`px-7 py-3 rounded-full font-bold text-sm shadow-xl transition-all flex items-center gap-2
-              ${scrolled 
-                ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/20' 
-                : 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/30'}`}
+              ${scrolled
+                ? 'bg-[#8B4513] text-white hover:bg-[#6D3610] shadow-orange-900/20'
+                : 'bg-[#8B4513] text-white hover:bg-[#6D3610] shadow-orange-900/30'}`}
           >
             <Heart className="w-4 h-4 fill-current" />
             Report Incident
@@ -97,7 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
         </div>
 
         {/* Mobile Toggle Button */}
-        <motion.button 
+        <motion.button
           whileTap={{ scale: 0.9 }}
           className={`md:hidden p-2 rounded-full transition-colors ${scrolled ? 'text-white' : 'text-[#2D2424]'}`}
           onClick={() => setIsOpen(!isOpen)}
@@ -109,7 +109,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
       {/* Mobile Fullscreen Menu */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
@@ -130,9 +130,9 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
 
             <div className="flex flex-col gap-8">
               {navLinks.map((link, idx) => (
-                <motion.a 
-                  key={link.name} 
-                  href={link.href} 
+                <motion.a
+                  key={link.name}
+                  href={link.href}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * idx }}
@@ -142,7 +142,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
                   {link.name}
                 </motion.a>
               ))}
-              <motion.button 
+              <motion.button
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
@@ -153,13 +153,13 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
                 Citizen Portal
               </motion.button>
             </div>
-            
+
             <div className="mt-auto pb-12">
-              <motion.button 
+              <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="w-full bg-red-600 text-white px-6 py-5 rounded-2xl font-bold text-xl shadow-2xl shadow-red-900/20"
+                className="w-full bg-[#8B4513] text-white px-6 py-5 rounded-2xl font-bold text-xl shadow-2xl shadow-orange-950/20"
               >
                 Report Dog Bite
               </motion.button>
