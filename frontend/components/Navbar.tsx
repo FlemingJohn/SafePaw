@@ -71,18 +71,8 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
           ))}
         </div>
 
-        {/* Right Action Side */}
-        <div className="hidden md:flex items-center gap-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onDashboardClick}
-            className={`flex items-center gap-2 text-sm font-bold transition-colors ${scrolled ? 'text-[#E9C46A] hover:text-[#FDFBF4]' : 'text-[#8B4513] hover:text-[#2D2424]'}`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Citizen Portal
-          </motion.button>
-
+        {/* CTA Buttons */}
+        <div className="hidden md:flex items-center gap-4">
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -142,16 +132,6 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
                   {link.name}
                 </motion.a>
               ))}
-              <motion.button
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                onClick={() => { onDashboardClick(); setIsOpen(false); }}
-                className="flex items-center gap-4 text-2xl font-bold text-[#E9C46A] pt-4 border-t border-white/10"
-              >
-                <LayoutDashboard className="w-8 h-8" />
-                Citizen Portal
-              </motion.button>
             </div>
 
             <div className="mt-auto pb-12">

@@ -49,14 +49,6 @@ const Hero: React.FC<HeroProps> = ({ onStartClick, onGovClick }) => {
               Report Incident
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            {onGovClick && (
-              <button
-                onClick={onGovClick}
-                className="w-full sm:w-auto flex items-center justify-center gap-3 border-2 border-[#8B4513] text-[#8B4513] px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#8B4513] hover:text-white transition-all active:scale-95"
-              >
-                🏛️ Government Portal
-              </button>
-            )}
           </motion.div>
         </motion.div>
 
