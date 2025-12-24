@@ -77,8 +77,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
             try {
                 // Check if Google Maps is loaded
-                if (typeof google === 'undefined') {
-                    setError('Google Maps not loaded. Please add API key.');
+                if (typeof google === 'undefined' || !google.maps) {
+                    setError('Google Maps not loaded. Please check API key.');
                     setIsLoading(false);
                     return;
                 }
@@ -101,27 +101,60 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 setMap(mapInstance);
                 setIsLoading(false);
             } catch (err) {
+                console.error('Map initialization error:', err);
                 setError('Failed to initialize map');
                 setIsLoading(false);
             }
         };
 
+        // Check if script already exists
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+
         // Load Google Maps script if not already loaded
-        if (!window.google) {
+        if (!window.google && !existingScript) {
+            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+            if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+                setError('Google Maps API key not configured');
+                setIsLoading(false);
+                return;
+            }
+
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
             script.async = true;
             script.defer = true;
-            script.onload = initMap;
+            script.onload = () => {
+                console.log('Google Maps loaded successfully');
+                initMap();
+            };
             script.onerror = () => {
-                setError('Failed to load Google Maps');
+                setError('Failed to load Google Maps. Check your API key.');
                 setIsLoading(false);
             };
             document.head.appendChild(script);
-        } else {
+        } else if (window.google) {
+            // Google Maps already loaded
             initMap();
+        } else {
+            // Script is loading, wait for it
+            const checkGoogle = setInterval(() => {
+                if (window.google) {
+                    clearInterval(checkGoogle);
+                    initMap();
+                }
+            }, 100);
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                clearInterval(checkGoogle);
+                if (!window.google) {
+                    setError('Google Maps loading timeout');
+                    setIsLoading(false);
+                }
+            }, 10000);
         }
-    }, [center, zoom]);
+    }, []);
 
     // Add markers to map
     useEffect(() => {
