@@ -21,15 +21,17 @@ import {
     Filter,
     Download,
     Eye,
-    Edit
+    Edit,
+    Bot
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import AIActionsPage from './AIActionsPage';
 
 interface GovDashboardProps {
     onExit: () => void;
 }
 
-type Page = 'home' | 'incidents' | 'abc' | 'analytics';
+type Page = 'home' | 'incidents' | 'ai-actions' | 'abc' | 'analytics';
 
 const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -80,6 +82,12 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                         active={currentPage === 'incidents'}
                         onClick={() => setCurrentPage('incidents')}
                         badge="12"
+                    />
+                    <SidebarItem
+                        icon={<Bot size={20} />}
+                        label="AI Actions"
+                        active={currentPage === 'ai-actions'}
+                        onClick={() => setCurrentPage('ai-actions')}
                     />
                     <SidebarItem
                         icon={<Scissors size={20} />}
@@ -133,6 +141,7 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                 >
                     {currentPage === 'home' && <HomePage />}
                     {currentPage === 'incidents' && <IncidentsPage />}
+                    {currentPage === 'ai-actions' && <AIActionsPage />}
                     {currentPage === 'abc' && <ABCPage />}
                     {currentPage === 'analytics' && <AnalyticsPage />}
                 </motion.main>
@@ -151,9 +160,9 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                     onClick={() => setCurrentPage('incidents')}
                 />
                 <MobileNavItem
-                    icon={<Scissors size={22} />}
-                    active={currentPage === 'abc'}
-                    onClick={() => setCurrentPage('abc')}
+                    icon={<Bot size={22} />}
+                    active={currentPage === 'ai-actions'}
+                    onClick={() => setCurrentPage('ai-actions')}
                 />
                 <MobileNavItem
                     icon={<BarChart3 size={22} />}

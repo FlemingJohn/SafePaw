@@ -121,7 +121,7 @@ export async function coordinateMultiAgentResponse(
 
         return {
             priority: {
-                score: priorityResult.priority,
+                priority: priorityResult.priority,
                 urgencyLevel: priorityResult.urgencyLevel,
                 reasoning: priorityResult.reasoning,
             },

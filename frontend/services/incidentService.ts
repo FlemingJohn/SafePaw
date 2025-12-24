@@ -39,6 +39,34 @@ export interface IncidentReport {
     reviewedBy?: string; // Government user ID
     actionTaken?: string;
     anonymous: boolean;
+    // AI-powered fields
+    priority?: number; // 1-10 scale
+    aiRecommendations?: AIRecommendation[];
+    assignedResources?: AssignedResource[];
+    escalationStatus?: 'normal' | 'escalated' | 'auto_contacted';
+    lastActionTimestamp?: Timestamp;
+    escalatedAt?: Timestamp;
+    autoContactedAgents?: string[];
+}
+
+// AI Recommendation interface
+export interface AIRecommendation {
+    id: string;
+    agentType: 'priority' | 'action' | 'resource';
+    recommendation: string;
+    confidence: number;
+    timestamp: Timestamp;
+    status: 'pending' | 'approved' | 'overridden' | 'executed';
+    overrideReason?: string;
+}
+
+// Assigned Resource interface
+export interface AssignedResource {
+    id: string;
+    type: 'rescue_team' | 'veterinarian' | 'animal_control';
+    name: string;
+    assignedAt: Timestamp;
+    status: 'assigned' | 'en_route' | 'on_site' | 'completed';
 }
 
 // Submit Incident Report
