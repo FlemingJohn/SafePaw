@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import SafetyPage from './SafetyPage';
 import {
   Home,
   MapPin,
@@ -30,7 +31,7 @@ interface DashboardProps {
   onExit: () => void;
 }
 
-type Page = 'home' | 'report' | 'heatmap' | 'emergency' | 'myreports' | 'legal';
+type Page = 'home' | 'report' | 'safety' | 'myreports' | 'legal';
 
 const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -79,16 +80,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
             onClick={() => setCurrentPage('report')}
           />
           <SidebarItem
-            icon={<Map size={20} />}
-            label="Risk Heatmap"
-            active={currentPage === 'heatmap'}
-            onClick={() => setCurrentPage('heatmap')}
-          />
-          <SidebarItem
-            icon={<AlertTriangle size={20} />}
-            label="Emergency Help"
-            active={currentPage === 'emergency'}
-            onClick={() => setCurrentPage('emergency')}
+            icon={<Shield size={20} />}
+            label="Safety & Emergency"
+            active={currentPage === 'safety'}
+            onClick={() => setCurrentPage('safety')}
           />
           <SidebarItem
             icon={<Scale size={20} />}
@@ -140,8 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
         >
           {currentPage === 'home' && <HomePage />}
           {currentPage === 'report' && <ReportPage />}
-          {currentPage === 'heatmap' && <HeatmapPage />}
-          {currentPage === 'emergency' && <EmergencyPage />}
+          {currentPage === 'safety' && <SafetyPage />}
           {currentPage === 'myreports' && <MyReportsPage />}
           {currentPage === 'legal' && <LegalPage />}
         </motion.main>
