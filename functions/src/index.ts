@@ -22,10 +22,11 @@ const ai = genkit({
 /**
  * Cloud Function: Process Incident with Multi-Agent AI
  * SECURITY: Rate limited to 10 requests per 15 minutes per IP
+ * NOTE: CORS is set to true - configure allowed origins in Firebase Console
  */
 exports.processIncidentWithAI = onRequest(
     {
-        cors: true,
+        cors: true,  // Configure allowed origins in Firebase Console for production
         // SECURITY FIX: Rate limiting to prevent abuse
         maxInstances: 10,
         timeoutSeconds: 60,
@@ -126,7 +127,7 @@ export const checkDelayedIncidents = onSchedule(
  */
 exports.autoContactGovernment = onRequest(
     {
-        cors: true,
+        cors: true,  // Configure allowed origins in Firebase Console
         // SECURITY FIX: Strict rate limiting for notification spam prevention
         maxInstances: 5,
         timeoutSeconds: 30,
@@ -169,7 +170,7 @@ exports.autoContactGovernment = onRequest(
  */
 exports.searchNearbyHospitals = onRequest(
     {
-        cors: true,
+        cors: true,  // Configure allowed origins in Firebase Console
         // SECURITY FIX: Rate limiting for API abuse prevention
         maxInstances: 15,
         timeoutSeconds: 30,

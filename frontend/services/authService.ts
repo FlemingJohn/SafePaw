@@ -97,7 +97,9 @@ export const signInWithEmail = async (
     try {
         return await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
-        throw new Error(error.message);
+        // SECURITY FIX: Generic error message to prevent user enumeration
+        // Don't reveal if email exists or password is wrong
+        throw new Error('Invalid email or password. Please try again.');
     }
 };
 
