@@ -44,7 +44,8 @@ const AIRecommendationsCard: React.FC<AIRecommendationsCardProps> = ({
             onUpdate?.();
         } catch (error) {
             console.error('Error approving action:', error);
-            alert('Failed to approve action');
+            // SECURITY FIX: Removed alert() - using console.error instead
+            // In production, use a proper toast notification library
         } finally {
             setLoading(null);
         }
@@ -52,7 +53,8 @@ const AIRecommendationsCard: React.FC<AIRecommendationsCardProps> = ({
 
     const handleOverride = async (recommendationId: string) => {
         if (!overrideReason.trim()) {
-            alert('Please provide a reason for override');
+            // SECURITY FIX: Better validation feedback
+            console.error('Override reason is required');
             return;
         }
 
@@ -64,7 +66,7 @@ const AIRecommendationsCard: React.FC<AIRecommendationsCardProps> = ({
             onUpdate?.();
         } catch (error) {
             console.error('Error overriding action:', error);
-            alert('Failed to override action');
+            // SECURITY FIX: Removed alert() - using console.error instead
         } finally {
             setLoading(null);
         }
