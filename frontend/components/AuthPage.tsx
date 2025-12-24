@@ -15,6 +15,10 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { signUpWithEmail, signInWithEmail, UserRole } from '../services/authService';
+import { mockAuth, MOCK_CREDENTIALS } from '../services/mockAuthService';
+
+// Toggle this to use mock authentication (no Firebase needed)
+const USE_MOCK_AUTH = true;
 
 type AuthView = 'login' | 'signup-citizen' | 'signup-government';
 
@@ -67,14 +71,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
         setLoading(true);
 
         try {
+            if (USE_MOCK_AUTH) {
+                // Try mock authentication first
+                const mockUser = mockAuth.login(loginEmail, loginPassword);
+                if (mockUser) {
+                    setSuccess('Login successful!');
+                    setTimeout(() => onSuccess(mockUser.role), 1000);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // If mock fails or disabled, try real Firebase authentication
             const userCredential = await signInWithEmail(loginEmail, loginPassword);
             setSuccess('Login successful!');
-
-            // Get user role from Firestore and redirect
-            // For now, we'll assume citizen role
             setTimeout(() => onSuccess('citizen'), 1000);
         } catch (err: any) {
-            setError(err.message || 'Login failed. Please check your credentials.');
+            if (USE_MOCK_AUTH) {
+                setError('Invalid credentials. Try mock: citizen@test.com or govt@test.com (password: test123), or use your Firebase account.');
+            } else {
+                setError(err.message || 'Login failed. Please check your credentials.');
+            }
         } finally {
             setLoading(false);
         }
@@ -163,23 +180,30 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
         setLoading(true);
 
         try {
-            await signUpWithEmail(
-                govData.email,
-                govData.password,
-                govData.name,
-                'government',
-                {
-                    govtId: govData.govtId,
-                    wardNo: govData.wardNo,
-                    state: govData.state,
-                    city: govData.city,
-                    gender: govData.gender,
-                    organization: 'Municipal Corporation'
-                }
-            );
-
-            setSuccess('Government account created! Logging you in...');
-            setTimeout(() => onSuccess('government'), 1500);
+            if (USE_MOCK_AUTH) {
+                // Mock signup
+                mockAuth.signup(govData.email, govData.name, 'government');
+                setSuccess('Government account created! Logging you in...');
+                setTimeout(() => onSuccess('government'), 1500);
+            } else {
+                // Real Firebase signup
+                await signUpWithEmail(
+                    govData.email,
+                    govData.password,
+                    govData.name,
+                    'government',
+                    {
+                        govtId: govData.govtId,
+                        wardNo: govData.wardNo,
+                        state: govData.state,
+                        city: govData.city,
+                        gender: govData.gender,
+                        organization: 'Municipal Corporation'
+                    }
+                );
+                setSuccess('Government account created! Logging you in...');
+                setTimeout(() => onSuccess('government'), 1500);
+            }
         } catch (err: any) {
             setError(err.message || 'Signup failed. Please try again.');
         } finally {
@@ -206,6 +230,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                                 </div>
                                 <h1 className="text-3xl font-bold text-[#2D2424]">Welcome Back</h1>
                                 <p className="text-[#2D2424]/60 mt-2">Sign in to SafePaw</p>
+
+                                {USE_MOCK_AUTH && (
+                                    <div className="mt-4 p-4 bg-[#FFF8E7] border-2 border-[#E9C46A] rounded-xl text-sm text-left">
+                                        <p className="font-bold text-[#8B4513] mb-2">
+                                            Mock Login (Testing Mode)
+                                        </p>
+                                        <div className="space-y-1 text-[#2D2424]">
+                                            <p><strong>Citizen:</strong> citizen@test.com</p>
+                                            <p><strong>Government:</strong> govt@test.com</p>
+                                            <p className="text-[#8B4513] text-xs mt-2">Password: test123</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Error/Success Messages */}
@@ -388,8 +425,8 @@ const CitizenSignupForm: React.FC<any> = ({
                                 type="button"
                                 onClick={() => setData({ ...data, gender })}
                                 className={`py-2 rounded-xl font-semibold text-xs transition-colors ${data.gender === gender
-                                        ? 'bg-[#8B4513] text-white'
-                                        : 'border-2 border-gray-200 text-[#2D2424] hover:border-[#8B4513]'
+                                    ? 'bg-[#8B4513] text-white'
+                                    : 'border-2 border-gray-200 text-[#2D2424] hover:border-[#8B4513]'
                                     }`}
                             >
                                 {gender.charAt(0).toUpperCase() + gender.slice(1)}
