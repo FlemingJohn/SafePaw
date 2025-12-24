@@ -1,12 +1,12 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
-import { genkit } from '@genkit-ai/ai';
-import { googleAI } from '@genkit-ai/googleai';
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 // Initialize Firebase Admin
 initializeApp();
 
-// Initialize Genkit with Google AI (Vertex AI)
+// Initialize Genkit with Google AI
 const ai = genkit({
     plugins: [googleAI()],
 });
@@ -23,9 +23,9 @@ export const searchNearbyHospitals = onRequest(
                 return;
             }
 
-            // Use Genkit to call Gemini with Google Maps grounding
+            // Use Genkit to call Gemini with location context
             const result = await ai.generate({
-                model: 'googleai/gemini-2.0-flash-exp',
+                model: googleAI.model('gemini-1.5-flash'),
                 prompt: `Find ${query || 'hospitals with rabies vaccine'} near coordinates ${latitude}, ${longitude}. 
         
         Provide:
@@ -42,19 +42,12 @@ export const searchNearbyHospitals = onRequest(
                 },
             });
 
-            // Extract grounding metadata (Google Maps links)
-            const groundingChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-
-            const mapLinks = groundingChunks
-                .filter((chunk: any) => chunk.web?.uri)
-                .map((chunk: any) => ({
-                    title: chunk.web.title || 'Location',
-                    uri: chunk.web.uri,
-                }));
+            // Extract text response
+            const responseText = result.text || 'No results found';
 
             res.json({
-                text: result.text || 'No results found',
-                mapLinks,
+                text: responseText,
+                mapLinks: [], // Google Maps grounding will be added when available
                 success: true,
             });
         } catch (error: any) {
