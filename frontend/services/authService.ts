@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { encryptData, decryptData } from '../utils/encryption';
 
 export type UserRole = 'citizen' | 'government' | 'ngo';
 
@@ -63,7 +64,13 @@ export const signUpWithEmail = async (
             if (additionalData.location) userProfile.location = additionalData.location;
             if (additionalData.city) userProfile.city = additionalData.city;
             if (additionalData.state) userProfile.state = additionalData.state;
-            if (additionalData.govtId) userProfile.govtId = additionalData.govtId;
+
+            // Encrypt sensitive government ID before storing
+            if (additionalData.govtId) {
+                userProfile.govtId = encryptData(additionalData.govtId);
+                userProfile.govtIdEncrypted = true; // Flag to indicate encryption
+            }
+
             if (additionalData.wardNo) userProfile.wardNo = additionalData.wardNo;
             if (additionalData.organization) userProfile.organization = additionalData.organization;
         }
