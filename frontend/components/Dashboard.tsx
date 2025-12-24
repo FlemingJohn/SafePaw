@@ -133,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           animate="show"
           className="flex-1 px-4 py-6 md:px-12 md:py-12"
         >
-          {currentPage === 'home' && <HomePage />}
+          {currentPage === 'home' && <HomePage onNavigate={setCurrentPage} />}
           {currentPage === 'report' && <ReportPage />}
           {currentPage === 'safety' && <SafetyPage />}
           {currentPage === 'myreports' && <MyReportsPage />}
@@ -178,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
 };
 
 // HOME PAGE
-const HomePage: React.FC = () => {
+const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate }) => {
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
@@ -191,14 +191,6 @@ const HomePage: React.FC = () => {
           <h1 className="text-4xl font-bold text-[#2D2424] mb-2">Welcome back, Citizen!</h1>
           <p className="text-[#2D2424]/60">Help us create safer communities together.</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="bg-[#8B4513] text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-orange-900/20 flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Quick Report
-        </motion.button>
       </motion.header>
 
       <motion.div variants={itemVariants} className="md:hidden mb-8">
@@ -274,18 +266,21 @@ const HomePage: React.FC = () => {
                 title="Report Incident"
                 description="Quick 30-second reporting"
                 color="bg-[#8B4513]"
+                onClick={() => onNavigate?.('report')}
               />
               <QuickActionCard
                 icon={<Map size={20} />}
                 title="Check Risk Zones"
                 description="View live heatmap"
                 color="bg-[#8AB17D]"
+                onClick={() => onNavigate?.('safety')}
               />
               <QuickActionCard
                 icon={<Phone size={20} />}
                 title="Emergency Help"
                 description="Find nearest hospital"
                 color="bg-[#BC6C25]"
+                onClick={() => onNavigate?.('safety')}
               />
             </div>
           </section>
@@ -701,11 +696,12 @@ const ActivityItem: React.FC<{ date: string; title: string; description: string;
   </div>
 );
 
-const QuickActionCard: React.FC<{ icon: React.ReactNode; title: string; description: string; color: string }> = ({
-  icon, title, description, color
+const QuickActionCard: React.FC<{ icon: React.ReactNode; title: string; description: string; color: string; onClick?: () => void }> = ({
+  icon, title, description, color, onClick
 }) => (
   <motion.div
     whileHover={{ x: 5 }}
+    onClick={onClick}
     className={`${color} text-white p-5 rounded-2xl shadow-lg cursor-pointer`}
   >
     <div className="flex items-center gap-3 mb-2">
