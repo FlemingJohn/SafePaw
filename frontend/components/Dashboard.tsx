@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   Clock,
   ChevronRight,
+  Scale,
+  BookOpen,
+  FileCheck,
   Shield,
   TrendingUp,
   Phone,
@@ -27,7 +30,7 @@ interface DashboardProps {
   onExit: () => void;
 }
 
-type Page = 'home' | 'report' | 'heatmap' | 'emergency' | 'myreports';
+type Page = 'home' | 'report' | 'heatmap' | 'emergency' | 'myreports' | 'legal';
 
 const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -88,6 +91,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
             onClick={() => setCurrentPage('emergency')}
           />
           <SidebarItem
+            icon={<Scale size={20} />}
+            label="Legal Aid"
+            active={currentPage === 'legal'}
+            onClick={() => setCurrentPage('legal')}
+          />
+          <SidebarItem
             icon={<FileText size={20} />}
             label="My Reports"
             active={currentPage === 'myreports'}
@@ -134,6 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           {currentPage === 'heatmap' && <HeatmapPage />}
           {currentPage === 'emergency' && <EmergencyPage />}
           {currentPage === 'myreports' && <MyReportsPage />}
+          {currentPage === 'legal' && <LegalPage />}
         </motion.main>
       </div>
 
@@ -513,6 +523,122 @@ const MyReportsPage: React.FC = () => {
   );
 };
 
+// LEGAL AID PAGE
+const LegalPage: React.FC = () => {
+  const [medicalExpense, setMedicalExpense] = useState('');
+  const [severity, setSeverity] = useState<'Minor' | 'Moderate' | 'Severe'>('Moderate');
+
+  const calculateCompensation = () => {
+    const expense = parseInt(medicalExpense) || 0;
+    const baseCompensation = severity === 'Severe' ? 100000 : severity === 'Moderate' ? 50000 : 25000;
+    return baseCompensation + expense;
+  };
+
+  return (
+    <div>
+      <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">Legal Aid & Compensation</h1>
+      <p className="text-[#2D2424]/60 mb-8">Know your rights and get the help you deserve</p>
+
+      {/* Compensation Calculator */}
+      <div className="bg-gradient-to-br from-[#8B4513]/10 to-[#E9C46A]/10 rounded-3xl p-6 md:p-8 mb-8 border-2 border-[#8B4513]/20">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-[#8B4513] p-3 rounded-xl">
+            <Scale size={24} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#2D2424]">Compensation Calculator</h2>
+            <p className="text-sm text-[#2D2424]/60">Estimate your eligible compensation</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-semibold text-[#2D2424] mb-2">Injury Severity</label>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                onClick={() => setSeverity('Minor')}
+                className={`py-3 rounded-xl font-semibold text-sm transition-colors ${severity === 'Minor' ? 'bg-[#8AB17D] text-white' : 'bg-white border-2 border-gray-200'}`}
+              >
+                Minor
+              </button>
+              <button
+                onClick={() => setSeverity('Moderate')}
+                className={`py-3 rounded-xl font-semibold text-sm transition-colors ${severity === 'Moderate' ? 'bg-[#E9C46A] text-[#2D2424]' : 'bg-white border-2 border-gray-200'}`}
+              >
+                Moderate
+              </button>
+              <button
+                onClick={() => setSeverity('Severe')}
+                className={`py-3 rounded-xl font-semibold text-sm transition-colors ${severity === 'Severe' ? 'bg-red-500 text-white' : 'bg-white border-2 border-gray-200'}`}
+              >
+                Severe
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-[#2D2424] mb-2">Medical Expenses (₹)</label>
+            <input
+              type="number"
+              value={medicalExpense}
+              onChange={(e) => setMedicalExpense(e.target.value)}
+              placeholder="Enter amount"
+              className="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#8B4513]/20"
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6">
+          <p className="text-sm text-[#2D2424]/60 mb-2">Estimated Compensation</p>
+          <p className="text-4xl font-bold text-[#8B4513] mb-4">₹{calculateCompensation().toLocaleString('en-IN')}</p>
+          <p className="text-xs text-[#2D2424]/60">
+            * This is an estimate. Actual compensation depends on case specifics and court judgment.
+          </p>
+        </div>
+      </div>
+
+      {/* Your Rights */}
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
+        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Your Rights as a Victim</h2>
+        <div className="space-y-4">
+          <RightCard
+            icon={<FileCheck size={20} />}
+            title="Right to Compensation"
+            description="You can claim compensation from pet owners (IPC 289) or Municipal Corporation for stray dog bites."
+          />
+          <RightCard
+            icon={<Shield size={20} />}
+            title="Free Medical Treatment"
+            description="Government hospitals must provide FREE anti-rabies vaccine and immunoglobulin under National Rabies Control Programme."
+          />
+          <RightCard
+            icon={<BookOpen size={20} />}
+            title="Legal Recourse"
+            description="File FIR under IPC 289, 337, 338. Sue for negligence. Municipal corporations are liable for ABC program failures."
+          />
+        </div>
+      </div>
+
+      {/* Required Documents */}
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
+        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Documents Needed</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DocumentItem text="Medical reports and bills" />
+          <DocumentItem text="FIR copy from police station" />
+          <DocumentItem text="Photos of injury" />
+          <DocumentItem text="Witness statements (if any)" />
+          <DocumentItem text="Vaccination records" />
+          <DocumentItem text="Identity proof" />
+        </div>
+      </div>
+
+
+    </div>
+  );
+};
+
+// HELPER COMPONENTS
+
 // HELPER COMPONENTS
 const SidebarItem: React.FC<{ icon: React.ReactNode; label: string; active?: boolean; badge?: string; onClick?: () => void }> = ({
   icon, label, active, badge, onClick
@@ -644,6 +770,53 @@ const ReportCard: React.FC<{ id: string; date: string; location: string; status:
     </div>
     <button className="text-[#8B4513] font-semibold text-sm hover:underline flex items-center gap-1">
       View Details <ChevronRight size={16} />
+    </button>
+  </div>
+);
+
+// Legal Aid Helper Components
+const RightCard: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({ icon, title, description }) => (
+  <div className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+    <div className="text-[#8B4513] mt-1">{icon}</div>
+    <div>
+      <h3 className="font-bold text-[#2D2424] mb-1">{title}</h3>
+      <p className="text-sm text-[#2D2424]/70">{description}</p>
+    </div>
+  </div>
+);
+
+const DocumentItem: React.FC<{ text: string }> = ({ text }) => (
+  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+    <CheckCircle2 size={18} className="text-[#8AB17D]" />
+    <span className="text-sm font-medium text-[#2D2424]">{text}</span>
+  </div>
+);
+
+const LawyerCard: React.FC<{ name: string; experience: string; specialization: string; location: string; cases: string }> = ({
+  name, experience, specialization, location, cases
+}) => (
+  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex justify-between items-start mb-4">
+      <div>
+        <h3 className="text-lg font-bold text-[#2D2424] mb-1">{name}</h3>
+        <p className="text-sm text-[#2D2424]/60">{specialization}</p>
+      </div>
+      <span className="bg-[#E9C46A]/20 text-[#8B4513] text-xs font-bold px-3 py-1 rounded-full">
+        {experience}
+      </span>
+    </div>
+    <div className="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <p className="text-xs text-[#2D2424]/60 mb-1">Location</p>
+        <p className="text-sm font-semibold">{location}</p>
+      </div>
+      <div>
+        <p className="text-xs text-[#2D2424]/60 mb-1">Experience</p>
+        <p className="text-sm font-semibold">{cases}</p>
+      </div>
+    </div>
+    <button className="w-full bg-[#8B4513] text-white py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors">
+      Contact Lawyer
     </button>
   </div>
 );
