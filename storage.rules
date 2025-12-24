@@ -20,10 +20,11 @@ service firebase.storage {
       return request.resource.contentType.matches('image/.*');
     }
     
-    // Incident Photos
+    // Incident Photos (CRITICAL: Privacy protection)
     match /incidents/{userId}/{fileName} {
-      // Anyone can read incident photos
-      allow read: if true;
+      // FIXED: Only authenticated users can view incident photos
+      // This protects victim privacy and prevents public exposure of sensitive images
+      allow read: if isAuthenticated();
       
       // Users can upload their own incident photos
       allow write: if isAuthenticated() && 

@@ -80,5 +80,21 @@ service cloud.firestore {
       allow read: if isGovernment();
       allow write: if isGovernment();
     }
+    
+    // Government Agents Collection (CRITICAL: Sensitive data)
+    match /governmentAgents/{agentId} {
+      // Only government users can read agent contact information
+      allow read: if isGovernment();
+      // Only government supervisors can modify agent data
+      allow write: if isGovernment();
+    }
+    
+    // Government Resources Collection (CRITICAL: Resource allocation)
+    match /governmentResources/{resourceId} {
+      // Only government users can read resource information
+      allow read: if isGovernment();
+      // Only government users can modify resource data
+      allow write: if isGovernment();
+    }
   }
 }
