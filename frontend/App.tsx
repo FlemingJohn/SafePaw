@@ -24,7 +24,7 @@ const App: React.FC = () => {
           >
             <Navbar onDashboardClick={() => setView('citizen')} />
             <main>
-              <Hero onStartClick={() => setView('citizen')} />
+              <Hero onStartClick={() => setView('citizen')} onGovClick={() => setView('government')} />
 
               <FeatureSection
                 id="report"

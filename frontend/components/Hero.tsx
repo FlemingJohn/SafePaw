@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 
 interface HeroProps {
   onStartClick: () => void;
+  onGovClick?: () => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ onStartClick }) => {
+const Hero: React.FC<HeroProps> = ({ onStartClick, onGovClick }) => {
   return (
     <section className="relative pt-24 pb-12 md:pt-48 md:pb-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col md:flex-row items-center justify-between gap-12">
@@ -39,7 +40,7 @@ const Hero: React.FC<HeroProps> = ({ onStartClick }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.8 }}
-            className="flex justify-center md:justify-start"
+            className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start"
           >
             <button
               onClick={onStartClick}
@@ -48,6 +49,14 @@ const Hero: React.FC<HeroProps> = ({ onStartClick }) => {
               Report Incident
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
+            {onGovClick && (
+              <button
+                onClick={onGovClick}
+                className="w-full sm:w-auto flex items-center justify-center gap-3 border-2 border-[#8B4513] text-[#8B4513] px-8 py-4 rounded-full text-lg font-semibold hover:bg-[#8B4513] hover:text-white transition-all active:scale-95"
+              >
+                🏛️ Government Portal
+              </button>
+            )}
           </motion.div>
         </motion.div>
 
