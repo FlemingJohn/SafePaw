@@ -94,7 +94,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
             onClick={() => setCurrentPage('myreports')}
             badge="3"
           />
-          <SidebarItem icon={<Settings size={20} />} label="Settings" />
         </nav>
 
         <button

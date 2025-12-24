@@ -93,7 +93,6 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                         active={currentPage === 'analytics'}
                         onClick={() => setCurrentPage('analytics')}
                     />
-                    <SidebarItem icon={<Settings size={20} />} label="Settings" />
                 </nav>
 
                 <button
@@ -571,8 +570,8 @@ const IncidentPreviewCard: React.FC<{ id: string; location: string; severity: st
                 </p>
             </div>
             <span className={`text-xs font-bold px-3 py-1 rounded-full ${severity === 'Severe' ? 'bg-red-100 text-red-700' :
-                    severity === 'Moderate' ? 'bg-orange-100 text-orange-700' :
-                        'bg-green-100 text-green-700'
+                severity === 'Moderate' ? 'bg-orange-100 text-orange-700' :
+                    'bg-green-100 text-green-700'
                 }`}>
                 {severity}
             </span>
@@ -624,9 +623,9 @@ const IncidentCard: React.FC<{
                 <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-xl font-bold text-[#2D2424]">{id}</h3>
                     <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'Resolved' ? 'bg-green-100 text-green-700' :
-                            status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
-                                status === 'Under Review' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-gray-100 text-gray-700'
+                        status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
+                            status === 'Under Review' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700'
                         }`}>
                         {status}
                     </span>
@@ -657,8 +656,8 @@ const IncidentCard: React.FC<{
             <div>
                 <p className="text-xs text-[#2D2424]/60 mb-1">Severity</p>
                 <span className={`text-sm font-bold ${severity === 'Severe' ? 'text-red-600' :
-                        severity === 'Moderate' ? 'text-orange-600' :
-                            'text-green-600'
+                    severity === 'Moderate' ? 'text-orange-600' :
+                        'text-green-600'
                     }`}>
                     {severity}
                 </span>
