@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB max
+    }
+    
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Incident Photos
+    match /incidents/{userId}/{fileName} {
+      // Anyone can read incident photos
+      allow read: if true;
+      
+      // Users can upload their own incident photos
+      allow write: if isAuthenticated() && 
+                     isOwner(userId) && 
+                     isValidImageSize() && 
+                     isValidImageType();
+    }
+    
+    // User Profile Photos
+    match /profiles/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && 
+                     isOwner(userId) && 
+                     isValidImageSize() && 
+                     isValidImageType();
+    }
+  }
+}

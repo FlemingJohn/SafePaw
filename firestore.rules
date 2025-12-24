@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isGovernment() {
+      return isAuthenticated() && getUserRole() == 'government';
+    }
+    
+    function isCitizen() {
+      return isAuthenticated() && getUserRole() == 'citizen';
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      // Anyone can read user profiles (for display purposes)
+      allow read: if isAuthenticated();
+      
+      // Users can only create/update their own profile
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+      
+      // Only the user can delete their own profile
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Incidents Collection
+    match /incidents/{incidentId} {
+      // Anyone authenticated can read incidents (for map/heatmap)
+      allow read: if isAuthenticated();
+      
+      // Any authenticated user can create an incident report
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid ||
+                      request.resource.data.anonymous == true;
+      
+      // Users can update their own reports (before government review)
+      allow update: if isAuthenticated() && (
+        // Owner can update if not yet reviewed
+        (isOwner(resource.data.userId) && resource.data.status == 'Reported') ||
+        // Government can update any incident
+        isGovernment()
+      );
+      
+      // Users can delete their own reports, government can delete any
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.userId) || isGovernment()
+      );
+    }
+    
+    // ABC Program Collection (Government only)
+    match /abc_programs/{programId} {
+      allow read: if isAuthenticated();
+      allow write: if isGovernment();
+    }
+    
+    // Hospitals Collection
+    match /hospitals/{hospitalId} {
+      // Anyone can read hospital data
+      allow read: if true;
+      // Only government can add/update hospitals
+      allow write: if isGovernment();
+    }
+    
+    // Analytics Collection (Government only)
+    match /analytics/{docId} {
+      allow read: if isGovernment();
+      allow write: if isGovernment();
+    }
+  }
+}
