@@ -21,6 +21,7 @@ import {
   Map
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import MapComponent from './MapComponent';
 
 interface DashboardProps {
   onExit: () => void;
@@ -381,14 +382,10 @@ const HeatmapPage: React.FC = () => {
       <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">Risk Heatmap</h1>
       <p className="text-[#2D2424]/60 mb-8">Check risk zones before traveling. Stay informed, stay safe.</p>
 
-      {/* Map Placeholder */}
+      {/* Interactive Map */}
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-6">
-        <div className="bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl h-96 flex items-center justify-center">
-          <div className="text-center">
-            <Map size={64} className="mx-auto text-[#8B4513] mb-4" />
-            <p className="text-lg font-semibold text-[#2D2424]">Interactive Map Coming Soon</p>
-            <p className="text-sm text-[#2D2424]/60">Leaflet/Google Maps integration</p>
-          </div>
+        <div className="h-96 md:h-[500px]">
+          <MapComponent />
         </div>
       </div>
 
@@ -635,8 +632,8 @@ const ReportCard: React.FC<{ id: string; date: string; location: string; status:
         <div className="flex items-center gap-3 mb-2">
           <h3 className="font-bold text-lg text-[#2D2424]">Report {id}</h3>
           <span className={`text-xs font-bold px-2 py-1 rounded-full ${status === 'Resolved' ? 'bg-green-100 text-green-700' :
-              status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
-                'bg-yellow-100 text-yellow-700'
+            status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
+              'bg-yellow-100 text-yellow-700'
             }`}>
             {status}
           </span>
