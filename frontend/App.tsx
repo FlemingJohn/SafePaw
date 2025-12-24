@@ -6,9 +6,10 @@ import Hero from './components/Hero';
 import FeatureSection from './components/FeatureSection';
 import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
+import GovDashboard from './components/GovDashboard';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'landing' | 'dashboard'>('landing');
+  const [view, setView] = useState<'landing' | 'citizen' | 'government'>('landing');
 
   return (
     <div className="min-h-screen selection:bg-orange-200 overflow-x-hidden">
@@ -21,9 +22,9 @@ const App: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
-            <Navbar onDashboardClick={() => setView('dashboard')} />
+            <Navbar onDashboardClick={() => setView('citizen')} />
             <main>
-              <Hero onStartClick={() => setView('dashboard')} />
+              <Hero onStartClick={() => setView('citizen')} />
 
               <FeatureSection
                 id="report"
@@ -57,15 +58,25 @@ const App: React.FC = () => {
             </main>
             <Footer />
           </motion.div>
-        ) : (
+        ) : view === 'citizen' ? (
           <motion.div
-            key="dashboard"
+            key="citizen"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
             <Dashboard onExit={() => setView('landing')} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="government"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <GovDashboard onExit={() => setView('landing')} />
           </motion.div>
         )}
       </AnimatePresence>
