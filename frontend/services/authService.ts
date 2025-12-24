@@ -30,19 +30,45 @@ export const signUpWithEmail = async (
     email: string,
     password: string,
     name: string,
-    role: UserRole = 'citizen'
+    role: UserRole = 'citizen',
+    additionalData?: {
+        phone?: string;
+        age?: number;
+        gender?: 'male' | 'female' | 'other';
+        location?: string;
+        city?: string;
+        state?: string;
+        govtId?: string;
+        wardNo?: string;
+        organization?: string;
+    }
 ): Promise<UserCredential> => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-        // Create user profile in Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        // Create user profile in Firestore with all data
+        const userProfile: any = {
             uid: userCredential.user.uid,
             email,
             role,
             name,
             createdAt: new Date(),
-        });
+        };
+
+        // Add additional data if provided (securely stored)
+        if (additionalData) {
+            if (additionalData.phone) userProfile.phone = additionalData.phone;
+            if (additionalData.age) userProfile.age = additionalData.age;
+            if (additionalData.gender) userProfile.gender = additionalData.gender;
+            if (additionalData.location) userProfile.location = additionalData.location;
+            if (additionalData.city) userProfile.city = additionalData.city;
+            if (additionalData.state) userProfile.state = additionalData.state;
+            if (additionalData.govtId) userProfile.govtId = additionalData.govtId;
+            if (additionalData.wardNo) userProfile.wardNo = additionalData.wardNo;
+            if (additionalData.organization) userProfile.organization = additionalData.organization;
+        }
+
+        await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
 
         return userCredential;
     } catch (error: any) {
