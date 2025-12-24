@@ -1,7 +1,11 @@
 import { onRequest } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { coordinateMultiAgentResponse, processDelayedIncidents } from './services/orchestrator';
+import { contactGovernmentAgents } from './services/contactService';
 
 // Initialize Firebase Admin
 initializeApp();
@@ -11,7 +15,145 @@ const ai = genkit({
     plugins: [googleAI()],
 });
 
-// Define the hospital search function
+// ============================================
+// CLOUD FUNCTIONS
+// ============================================
+
+/**
+ * HTTP Function: Process incident with AI agents
+ * Manually trigger AI analysis for an incident
+ */
+export const processIncidentWithAI = onRequest(
+    { cors: true },
+    async (req, res) => {
+        try {
+            const { incidentId } = req.body;
+
+            if (!incidentId) {
+                res.status(400).json({ error: 'incidentId is required' });
+                return;
+            }
+
+            console.log(`🤖 Processing incident ${incidentId} with AI agents...`);
+
+            const result = await coordinateMultiAgentResponse(ai, incidentId);
+
+            res.json({
+                success: true,
+                incidentId,
+                result,
+                message: 'Multi-agent analysis complete',
+            });
+        } catch (error: any) {
+            console.error('❌ Error processing incident:', error);
+            res.status(500).json({
+                error: 'Failed to process incident',
+                message: error.message,
+                success: false,
+            });
+        }
+    }
+);
+
+/**
+ * Firestore Trigger: Automatically process new incidents
+ * Triggers when a new incident is created
+ */
+export const onIncidentCreated = onDocumentCreated(
+    'incidents/{incidentId}',
+    async (event) => {
+        try {
+            const incidentId = event.params.incidentId;
+            console.log(`🆕 New incident created: ${incidentId}`);
+
+            // Automatically run multi-agent analysis
+            const result = await coordinateMultiAgentResponse(ai, incidentId);
+
+            console.log(`✅ Auto-processed incident ${incidentId}:`, result.reasoning);
+        } catch (error: any) {
+            console.error('❌ Error in onIncidentCreated trigger:', error);
+            // Don't throw - we don't want to fail the document creation
+        }
+    }
+);
+
+/**
+ * Scheduled Function: Check for delayed incidents
+ * Runs every hour to detect incidents delayed >24 hours
+ */
+export const checkDelayedIncidents = onSchedule(
+    {
+        schedule: 'every 1 hours',
+        timeZone: 'Asia/Kolkata',
+    },
+    async (event) => {
+        try {
+            console.log('⏰ Running scheduled check for delayed incidents...');
+
+            // Process delayed incidents
+            const escalatedIds = await processDelayedIncidents(ai);
+
+            if (escalatedIds.length > 0) {
+                console.log(`⚠️ Escalated ${escalatedIds.length} incidents`);
+
+                // Contact government agents for each escalated incident
+                for (const incidentId of escalatedIds) {
+                    try {
+                        const { contacted, failed } = await contactGovernmentAgents(incidentId);
+                        console.log(`📞 Incident ${incidentId}: Contacted ${contacted} agents, ${failed} failed`);
+                    } catch (error: any) {
+                        console.error(`❌ Failed to contact agents for ${incidentId}:`, error.message);
+                    }
+                }
+            } else {
+                console.log('✅ No delayed incidents found');
+            }
+        } catch (error: any) {
+            console.error('❌ Error in checkDelayedIncidents:', error);
+        }
+    }
+);
+
+/**
+ * HTTP Function: Manually trigger escalation contact
+ * For testing or manual escalation
+ */
+export const autoContactGovernment = onRequest(
+    { cors: true },
+    async (req, res) => {
+        try {
+            const { incidentId } = req.body;
+
+            if (!incidentId) {
+                res.status(400).json({ error: 'incidentId is required' });
+                return;
+            }
+
+            console.log(`📞 Manually triggering contact for incident ${incidentId}...`);
+
+            const { contacted, failed } = await contactGovernmentAgents(incidentId);
+
+            res.json({
+                success: true,
+                incidentId,
+                contacted,
+                failed,
+                message: `Contacted ${contacted} government agents`,
+            });
+        } catch (error: any) {
+            console.error('❌ Error contacting government:', error);
+            res.status(500).json({
+                error: 'Failed to contact government agents',
+                message: error.message,
+                success: false,
+            });
+        }
+    }
+);
+
+/**
+ * HTTP Function: Search nearby hospitals (existing function)
+ */
 export const searchNearbyHospitals = onRequest(
     { cors: true },
     async (req, res) => {
@@ -47,7 +189,7 @@ export const searchNearbyHospitals = onRequest(
 
             res.json({
                 text: responseText,
-                mapLinks: [], // Google Maps grounding will be added when available
+                mapLinks: [],
                 success: true,
             });
         } catch (error: any) {
