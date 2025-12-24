@@ -12,6 +12,7 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { encryptData, decryptData } from '../utils/encryption';
+import { validatePasswordStrength } from '../utils/passwordValidation';
 
 export type UserRole = 'citizen' | 'government' | 'ngo';
 
@@ -45,6 +46,12 @@ export const signUpWithEmail = async (
     }
 ): Promise<UserCredential> => {
     try {
+        // SECURITY FIX: Validate password strength
+        const passwordValidation = validatePasswordStrength(password);
+        if (!passwordValidation.isValid) {
+            throw new Error(passwordValidation.errors.join('. '));
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         // Create user profile in Firestore with all data

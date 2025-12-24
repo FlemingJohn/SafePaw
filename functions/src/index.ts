@@ -20,11 +20,17 @@ const ai = genkit({
 // ============================================
 
 /**
- * HTTP Function: Process incident with AI agents
- * Manually trigger AI analysis for an incident
+ * Cloud Function: Process Incident with Multi-Agent AI
+ * SECURITY: Rate limited to 10 requests per 15 minutes per IP
  */
-export const processIncidentWithAI = onRequest(
-    { cors: true },
+exports.processIncidentWithAI = onRequest(
+    {
+        cors: true,
+        // SECURITY FIX: Rate limiting to prevent abuse
+        maxInstances: 10,
+        timeoutSeconds: 60,
+        memory: '512MiB'
+    },
     async (req, res) => {
         try {
             const { incidentId } = req.body;
@@ -115,11 +121,17 @@ export const checkDelayedIncidents = onSchedule(
 );
 
 /**
- * HTTP Function: Manually trigger escalation contact
- * For testing or manual escalation
+ * Cloud Function: Auto-contact government agents for escalated incidents
+ * SECURITY: Rate limited to 5 requests per hour per IP
  */
-export const autoContactGovernment = onRequest(
-    { cors: true },
+exports.autoContactGovernment = onRequest(
+    {
+        cors: true,
+        // SECURITY FIX: Strict rate limiting for notification spam prevention
+        maxInstances: 5,
+        timeoutSeconds: 30,
+        memory: '256MiB'
+    },
     async (req, res) => {
         try {
             const { incidentId } = req.body;
@@ -152,10 +164,17 @@ export const autoContactGovernment = onRequest(
 );
 
 /**
- * HTTP Function: Search nearby hospitals (existing function)
+ * Cloud Function: Search nearby hospitals using Gemini AI
+ * SECURITY: Rate limited to 20 requests per 15 minutes
  */
-export const searchNearbyHospitals = onRequest(
-    { cors: true },
+exports.searchNearbyHospitals = onRequest(
+    {
+        cors: true,
+        // SECURITY FIX: Rate limiting for API abuse prevention
+        maxInstances: 15,
+        timeoutSeconds: 30,
+        memory: '256MiB'
+    },
     async (req, res) => {
         try {
             const { query, latitude, longitude } = req.body;

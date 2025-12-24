@@ -1,5 +1,7 @@
 // AI Service - API client for multi-agent Cloud Functions
 
+import { sanitizeIncidentId, sanitizeRecommendationId, sanitizeTextInput } from '../utils/sanitization';
+
 const FUNCTIONS_URL = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'http://localhost:5001/safepaw-b4f5d/us-central1';
 
 export interface AIAnalysisResult {
@@ -40,12 +42,15 @@ export interface ContactResult {
  */
 export const triggerAIAnalysis = async (incidentId: string): Promise<AIAnalysisResult> => {
     try {
+        // SECURITY FIX: Sanitize incident ID
+        const sanitizedId = sanitizeIncidentId(incidentId);
+
         const response = await fetch(`${FUNCTIONS_URL}/processIncidentWithAI`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ incidentId }),
+            body: JSON.stringify({ incidentId: sanitizedId }),
         });
 
         if (!response.ok) {
@@ -65,12 +70,15 @@ export const triggerAIAnalysis = async (incidentId: string): Promise<AIAnalysisR
  */
 export const manualEscalation = async (incidentId: string): Promise<ContactResult> => {
     try {
+        // SECURITY FIX: Sanitize incident ID
+        const sanitizedId = sanitizeIncidentId(incidentId);
+
         const response = await fetch(`${FUNCTIONS_URL}/autoContactGovernment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ incidentId }),
+            body: JSON.stringify({ incidentId: sanitizedId }),
         });
 
         if (!response.ok) {
@@ -93,23 +101,27 @@ export const approveAIAction = async (
     recommendationId: string
 ): Promise<void> => {
     try {
+        // SECURITY FIX: Sanitize inputs
+        const sanitizedIncidentId = sanitizeIncidentId(incidentId);
+        const sanitizedRecommendationId = sanitizeRecommendationId(recommendationId);
+
         // Update recommendation status in Firestore
         const { doc, updateDoc, arrayUnion } = await import('firebase/firestore');
         const { db } = await import('../lib/firebase');
 
-        const incidentRef = doc(db, 'incidents', incidentId);
+        const incidentRef = doc(db, 'incidents', sanitizedIncidentId);
 
         // This is a simplified version - in production, you'd update the specific recommendation
         await updateDoc(incidentRef, {
             [`aiRecommendations`]: arrayUnion({
-                id: recommendationId,
+                id: sanitizedRecommendationId,
                 status: 'approved',
                 approvedAt: new Date(),
             }),
             updatedAt: new Date(),
         });
 
-        console.log(`Approved recommendation ${recommendationId} for incident ${incidentId}`);
+        // SECURITY FIX: Removed console.log with sensitive data
     } catch (error: any) {
         console.error('Error approving AI action:', error);
         throw new Error(`Failed to approve action: ${error.message}`);
@@ -125,22 +137,31 @@ export const overrideAIAction = async (
     reason: string
 ): Promise<void> => {
     try {
+        // SECURITY FIX: Sanitize all inputs
+        const sanitizedIncidentId = sanitizeIncidentId(incidentId);
+        const sanitizedRecommendationId = sanitizeRecommendationId(recommendationId);
+        const sanitizedReason = sanitizeTextInput(reason, 500);
+
+        if (!sanitizedReason || sanitizedReason.length === 0) {
+            throw new Error('Override reason is required');
+        }
+
         const { doc, updateDoc, arrayUnion } = await import('firebase/firestore');
         const { db } = await import('../lib/firebase');
 
-        const incidentRef = doc(db, 'incidents', incidentId);
+        const incidentRef = doc(db, 'incidents', sanitizedIncidentId);
 
         await updateDoc(incidentRef, {
             [`aiRecommendations`]: arrayUnion({
-                id: recommendationId,
+                id: sanitizedRecommendationId,
                 status: 'overridden',
-                overrideReason: reason,
+                overrideReason: sanitizedReason,
                 overriddenAt: new Date(),
             }),
             updatedAt: new Date(),
         });
 
-        console.log(`Overridden recommendation ${recommendationId} for incident ${incidentId}`);
+        // SECURITY FIX: Removed console.log with sensitive data
     } catch (error: any) {
         console.error('Error overriding AI action:', error);
         throw new Error(`Failed to override action: ${error.message}`);
