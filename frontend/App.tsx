@@ -87,7 +87,10 @@ const App: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
-            <Navbar onDashboardClick={() => setView('auth')} />
+            <Navbar
+              onCitizenClick={() => setView('auth')}
+              onGovClick={() => setView('auth')}
+            />
             <main>
               <Hero
                 onStartClick={() => setView('auth')}

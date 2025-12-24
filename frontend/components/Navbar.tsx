@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, PawPrint, LayoutDashboard, Heart, ShoppingBag } from 'lucide-react';
+import { Menu, X, PawPrint, LayoutDashboard, Heart, ShoppingBag, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavbarProps {
-  onDashboardClick: () => void;
+  onCitizenClick: () => void;
+  onGovClick: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
+const Navbar: React.FC<NavbarProps> = ({ onCitizenClick, onGovClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -38,7 +39,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
           boxShadow: scrolled ? '0 20px 40px rgba(0,0,0,0.1)' : '0 0px 0px rgba(0,0,0,0)',
         }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
-        className={`max-w-7xl mx-auto flex justify-between items-center pointer-events-auto w-full`}
+        className="max-w-7xl mx-auto flex justify-between items-center pointer-events-auto w-full"
       >
         {/* Logo Section */}
         <motion.div
@@ -50,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
             <PawPrint className="text-white w-5 h-5" />
           </div>
           <span className={`text-xl md:text-2xl font-bold tracking-tight transition-colors duration-300 ${scrolled ? 'text-[#FDFBF4]' : 'text-[#2D2424]'}`}>
-            Safe Paw
+            SafePaw
           </span>
         </motion.div>
 
@@ -74,15 +75,31 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center gap-4">
           <motion.button
+            onClick={onCitizenClick}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             className={`px-7 py-3 rounded-full font-bold text-sm shadow-xl transition-all flex items-center gap-2
               ${scrolled
                 ? 'bg-[#8B4513] text-white hover:bg-[#6D3610] shadow-orange-900/20'
-                : 'bg-[#8B4513] text-white hover:bg-[#6D3610] shadow-orange-900/30'}`}
+                : 'bg-[#8B4513] text-white hover:bg-[#6D3610] shadow-orange-900/30'
+              }`}
           >
             <Heart className="w-4 h-4 fill-current" />
             Report Incident
+          </motion.button>
+
+          <motion.button
+            onClick={onGovClick}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            className={`px-7 py-3 rounded-full font-bold text-sm shadow-xl transition-all flex items-center gap-2 border-2
+              ${scrolled
+                ? 'border-[#E9C46A] text-[#E9C46A] hover:bg-[#E9C46A] hover:text-[#2D2424]'
+                : 'border-[#8B4513] text-[#8B4513] hover:bg-[#8B4513] hover:text-white'
+              }`}
+          >
+            <Shield className="w-4 h-4" />
+            Take Action
           </motion.button>
         </div>
 
@@ -111,7 +128,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDashboardClick }) => {
                 <div className="bg-[#8B4513] p-2 rounded-xl">
                   <PawPrint className="text-white w-5 h-5" />
                 </div>
-                <span className="text-2xl font-bold text-white tracking-tight">Safe Paw</span>
+                <span className="text-2xl font-bold text-white tracking-tight">SafePaw</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="text-white">
                 <X className="w-8 h-8" />
