@@ -6,7 +6,48 @@ SafePaw is a comprehensive web application that helps citizens report dog bite i
 
 ---
 
-## 🌟 Features
+## 🚨 Problem Statement
+
+Dog bite incidents and rabies deaths remain a critical public health challenge in India. Despite prevention efforts, the numbers continue to rise, with vulnerable populations—children, elderly, and differently-abled citizens—being the worst affected.
+
+### 2025 State-Specific Statistics
+
+**Tamil Nadu**
+- 5.25 lakh (525,000) dog bite cases reported
+- 28 rabies deaths recorded
+- Vulnerable groups: Children, elderly, and differently-abled citizens most affected
+
+**Kerala**
+- 23 rabies deaths in first 7 months of 2025
+- Continuing trend of high incident rates
+
+**Karnataka**
+- Over 2.3 lakh (230,000) dog bite cases (January-June 2025)
+- At least 19 confirmed rabies deaths
+- Significant increase from previous years
+
+**Maharashtra**
+- Over 56,000 dog bite cases in January 2025 alone
+- 30 rabies deaths reported (2021-2023 period)
+- High-density urban areas most affected
+
+### The Challenge
+
+- **Delayed Response**: Many incidents go unreported or receive delayed government action
+- **Resource Allocation**: Inefficient distribution of rescue teams and veterinary services
+- **Lack of Coordination**: No centralized system for tracking and managing incidents
+- **Prevention Gaps**: Insufficient data for identifying high-risk areas and implementing ABC programs
+- **Victim Support**: Limited awareness of legal rights and compensation procedures
+
+### SafePaw's Solution
+
+SafePaw addresses these challenges through:
+- **Real-time Incident Reporting** with GPS tracking and photo evidence
+- **AI-Powered Prioritization** using multi-agent system for urgent case identification
+- **Automated Escalation** for incidents delayed >24 hours
+- **Resource Optimization** through intelligent allocation of government resources
+- **Data-Driven Insights** for prevention and ABC program planning
+- **Legal Aid Support** with compensation calculator and rights information
 
 ### For Citizens
 - **📍 Report Incidents** - Quick incident reporting with GPS auto-detection, photo upload, and severity selection
@@ -34,6 +75,59 @@ SafePaw is a comprehensive web application that helps citizens report dog bite i
 - ✅ Responsive design (mobile & desktop)
 - ✅ Smooth animations and modern UI
 
+### AI-Powered Features (Genkit AI)
+- 🤖 **Multi-Agent AI System** - 4 specialized agents working together
+- 🎯 **Smart Prioritization** - Automatic incident scoring (1-10 scale)
+- 📋 **Action Recommendations** - AI-suggested government actions
+- 🚑 **Resource Allocation** - Intelligent assignment of rescue teams, vets, animal control
+- ⏰ **Auto-Escalation** - Detects incidents delayed >24 hours
+- 📧 **Automated Notifications** - SMS/Email to government agents
+- 📊 **AI Dashboard** - Real-time agent actions and history
+- ✅ **Approve/Override** - Government can approve or override AI recommendations
+
+---
+
+## 🤖 Genkit AI Multi-Agent System
+
+SafePaw uses **Google Genkit** with **Gemini AI** to power an intelligent multi-agent system:
+
+### The 4 AI Agents
+
+1. **Priority Analyzer Agent**
+   - Calculates incident urgency (1-10 scale)
+   - Considers: severity, location risk, time urgency, resource availability
+   - Output: Priority score + urgency level (low/medium/high/critical)
+
+2. **Action Coordinator Agent**
+   - Recommends specific government actions
+   - Based on: incident severity and priority
+   - Output: List of actions with priority levels and estimated times
+
+3. **Resource Manager Agent**
+   - Allocates available resources
+   - Resources: rescue teams, veterinarians, animal control
+   - Output: Assigned resources with distance calculations
+
+4. **Escalation Monitor Agent**
+   - Monitors incidents for delays >24 hours
+   - Triggers automatic escalation
+   - Output: List of delayed incidents requiring attention
+
+### How It Works
+
+```
+New Incident → Priority Analyzer → Action Coordinator → Resource Manager → Update Firestore
+                                                                              ↓
+                                                                    Government Dashboard
+                                                                              ↓
+                                                              Approve/Override AI Actions
+```
+
+**Automatic Escalation Flow:**
+```
+Hourly Check → Escalation Monitor → Detect Delays >24h → Update Status → Contact Agents (SMS/Email)
+```
+
 ---
 
 ## 🛠️ Tech Stack
@@ -46,16 +140,53 @@ SafePaw is a comprehensive web application that helps citizens report dog bite i
 - **Icons**: Lucide React
 - **Maps**: Google Maps JavaScript API
 - **Fonts**: Fraunces, Inter
+- **State Management**: React Hooks
+- **Real-time Updates**: Firestore onSnapshot listeners
 
 ### Backend (Serverless)
+- **Runtime**: Node.js (Firebase Functions v2)
+- **Language**: TypeScript
 - **Authentication**: Firebase Auth (Email/Password & Phone OTP)
-- **Database**: Cloud Firestore
-- **Storage**: Firebase Storage
-- **Hosting**: Firebase Hosting (optional)
+- **Database**: Cloud Firestore (NoSQL)
+- **Storage**: Firebase Storage (Cloud Storage)
 - **Analytics**: Firebase Analytics
-- **AI/ML**: Google Gemini AI (Multi-Agent System)
-- **Cloud Functions**: Firebase Functions v2
-- **Notifications**: Twilio SMS + Nodemailer Email
+- **Functions**: Firebase Cloud Functions v2
+- **Scheduled Tasks**: Cloud Scheduler (hourly checks)
+
+### AI & Machine Learning
+- **AI Framework**: Google Genkit (v1.27.0)
+- **AI Model**: Google Gemini AI (via Google AI Studio)
+- **Multi-Agent System**: 4 specialized AI agents
+  - Priority Analyzer Agent
+  - Action Coordinator Agent
+  - Resource Manager Agent
+  - Escalation Monitor Agent
+- **Schema Validation**: Zod (for AI tool inputs/outputs)
+- **AI Features**:
+  - Automatic incident priority scoring (1-10 scale)
+  - Smart action recommendations
+  - Resource allocation optimization
+  - Automatic escalation detection (>24 hours)
+
+### Communication & Notifications
+- **SMS**: Twilio API
+- **Email**: Nodemailer (SMTP)
+- **Real-time**: Firestore real-time listeners
+
+### Google Cloud Services
+- **Firebase Platform**:
+  - Firebase Authentication
+  - Cloud Firestore
+  - Cloud Storage for Firebase
+  - Firebase Cloud Functions
+  - Firebase Analytics
+- **Google AI**:
+  - Gemini AI (via Google AI Studio)
+  - Genkit AI Framework
+- **Google Maps Platform**:
+  - Maps JavaScript API
+  - Geocoding API (optional)
+  - Places API (optional)
 
 ---
 
@@ -276,70 +407,6 @@ All data is securely stored in Firebase Firestore with role-based access control
 
 ---
 
-## 🎨 Design System
-
-### Colors
-- **Primary Brown**: `#8B4513`
-- **Dark Brown**: `#2D2424`
-- **Golden**: `#E9C46A`
-- **Light Brown**: `#BC6C25`
-- **Green**: `#8AB17D`
-- **Cream Background**: `#FDFBF4`
-
-### Typography
-- **Headings**: Fraunces (serif)
-- **Body**: Inter (sans-serif)
-
-### Design Principles
-- Brownish color theme throughout
-- Smooth animations with Framer Motion
-- Rounded corners and organic shapes
-- Mobile-first responsive design
-- Accessible and user-friendly
-
----
-
-## 📱 Pages
-
-### Citizen Dashboard (6 Pages)
-1. **Home** - Overview with stats, activity feed, quick actions
-2. **Report Incident** - GPS location, photo upload, severity selection
-3. **Risk Heatmap** - Interactive map with color-coded markers
-4. **Emergency Help** - First aid steps + hospital finder
-5. **Legal Aid** - Compensation calculator, rights, documents
-6. **My Reports** - Track submitted reports
-
-### Government Dashboard (4 Pages)
-1. **Home** - Key metrics and overview
-2. **Incident Management** - Review and update reports
-3. **ABC Program** - Sterilization tracking
-4. **Analytics & Reports** - Data insights and exports
-
----
-
-## 🌍 Deployment
-
-### Firebase Hosting
-
-1. **Build the app**
-   ```bash
-   cd frontend
-   npm run build
-   ```
-
-2. **Deploy to Firebase**
-   ```bash
-   cd ..
-   firebase deploy
-   ```
-
-3. **Your app is live!**
-   ```
-   https://your-project.web.app
-   ```
-
----
-
 ## 🧪 Testing
 
 ### Test Accounts
@@ -406,46 +473,6 @@ This project is licensed under the MIT License.
 For issues and questions:
 - Create an issue on GitHub
 - Email: support@safepaw.in (example)
-
----
-
-## 🗺️ Roadmap
-
-### Phase 1 ✅ (Complete)
-- [x] Citizen Dashboard
-- [x] Government Dashboard
-- [x] Firebase Backend
-- [x] Authentication System
-- [x] Google Maps Integration
-- [x] Legal Aid Calculator
-
-### Phase 2 🚧 (In Progress)
-- [x] AI-powered incident prioritization
-- [x] Multi-agent coordination system
-- [x] Automatic escalation (>24 hours)
-- [x] SMS/Email Notifications
-- [ ] NGO Dashboard
-- [ ] Advanced Analytics Dashboard
-- [ ] Mobile App (React Native)
-- [ ] Multi-language Support
-- [ ] Dark Mode
-
-### Phase 3 💡 (Planned)
-- [ ] Community forums
-- [ ] Veterinary services integration
-- [ ] Government API integration
-- [ ] Blockchain-based verification
-- [ ] Predictive analytics for incident hotspots
-
----
-
-## 📊 Statistics
-
-- **Total Pages**: 10+ pages
-- **Lines of Code**: 3,500+
-- **Components**: 15+
-- **Services**: 2 (Auth + Incidents)
-- **Security Rules**: 2 (Firestore + Storage)
 
 ---
 
