@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Updated dashboard with real-time sync
 import {
     Home,
     FileText,
@@ -18,15 +19,21 @@ import {
     Users,
     MapPin,
     Calendar,
-    Filter,
     Download,
     Eye,
     Edit,
-    Bot
+    Bot,
+    Loader2,
+    Filter,
+    Plus,
+    ArrowUpRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc, Timestamp, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import AIActionsPage from './AIActionsPage';
 import MapComponent from './MapComponent';
+import type { IncidentReport, IncidentStatus } from '../services/incidentService';
 
 interface GovDashboardProps {
     onExit: () => void;
@@ -36,6 +43,32 @@ type Page = 'home' | 'incidents' | 'ai-actions' | 'abc' | 'analytics';
 
 const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
     const [currentPage, setCurrentPage] = useState<Page>('home');
+    const [incidents, setIncidents] = useState<IncidentReport[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        console.log('🏛️ GovDashboard: Setting up real-time incident listener...');
+
+        const q = query(
+            collection(db, 'incidents'),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedIncidents = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as IncidentReport));
+            setIncidents(fetchedIncidents);
+            setLoading(false);
+            console.log(`✅ GovDashboard: Received ${fetchedIncidents.length} incidents`);
+        }, (error) => {
+            console.error('❌ GovDashboard: listener error:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -82,7 +115,6 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                         label="Incident Management"
                         active={currentPage === 'incidents'}
                         onClick={() => setCurrentPage('incidents')}
-                        badge="12"
                     />
                     <SidebarItem
                         icon={<Bot size={20} />}
@@ -134,10 +166,11 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                     animate="show"
                     className="flex-1 px-4 py-6 md:px-12 md:py-12"
                 >
-                    {currentPage === 'home' && <HomePage onNavigate={setCurrentPage} />}
-                    {currentPage === 'incidents' && <IncidentsPage />}
+                    {currentPage === 'home' && <HomePage incidents={incidents} loading={loading} onNavigate={setCurrentPage} />}
+                    {currentPage === 'incidents' && <IncidentsPage incidents={incidents} loading={loading} />}
                     {currentPage === 'ai-actions' && <AIActionsPage />}
                     {currentPage === 'abc' && <ABCPage />}
+                    {currentPage === 'analytics' && <AnalyticsPage />}
                 </motion.main>
             </div>
 
@@ -169,11 +202,21 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
 };
 
 // HOME PAGE
-const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate }) => {
+const HomePage: React.FC<{ incidents: IncidentReport[]; loading: boolean; onNavigate?: (page: Page) => void }> = ({ incidents, loading, onNavigate }) => {
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 }
     };
+
+    const stats = {
+        total: incidents.length,
+        pending: incidents.filter(i => i.status === 'Reported').length,
+        resolved: incidents.filter(i => i.status === 'Resolved').length,
+    };
+
+    const recentPending = incidents
+        .filter(i => i.status === 'Reported' || i.status === 'Under Review')
+        .slice(0, 3);
 
     return (
         <>
@@ -187,7 +230,7 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
                 <motion.div variants={itemVariants}>
                     <MetricCard
                         title="Total Incidents"
-                        value="45"
+                        value={loading ? "..." : stats.total.toString()}
                         change="+12% this month"
                         trend="up"
                         icon={<FileText className="text-[#8B4513]" />}
@@ -197,7 +240,7 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
                 <motion.div variants={itemVariants}>
                     <MetricCard
                         title="Pending Actions"
-                        value="12"
+                        value={loading ? "..." : stats.pending.toString()}
                         change="Requires attention"
                         trend="neutral"
                         icon={<Clock className="text-[#BC6C25]" />}
@@ -207,7 +250,7 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
                 <motion.div variants={itemVariants}>
                     <MetricCard
                         title="Resolved"
-                        value="28"
+                        value={loading ? "..." : stats.resolved.toString()}
                         change="62% resolution rate"
                         trend="up"
                         icon={<CheckCircle2 className="text-[#8AB17D]" />}
@@ -232,30 +275,35 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
                     <motion.section variants={itemVariants}>
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl md:text-2xl font-bold text-[#2D2424]">Pending Incidents</h2>
-                            <button className="text-[#8B4513] font-semibold text-sm hover:underline">View All</button>
+                            <button
+                                onClick={() => onNavigate?.('incidents')}
+                                className="text-[#8B4513] font-semibold text-sm hover:underline"
+                            >
+                                View All
+                            </button>
                         </div>
                         <div className="space-y-4">
-                            <IncidentPreviewCard
-                                id="#1234"
-                                location="MG Road, Sector 5"
-                                severity="Moderate"
-                                date="2 hours ago"
-                                status="Reported"
-                            />
-                            <IncidentPreviewCard
-                                id="#1233"
-                                location="Park Street, Block A"
-                                severity="Severe"
-                                date="5 hours ago"
-                                status="Under Review"
-                            />
-                            <IncidentPreviewCard
-                                id="#1230"
-                                location="Market Area, Zone 3"
-                                severity="Minor"
-                                date="1 day ago"
-                                status="Reported"
-                            />
+                            {loading ? (
+                                <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                                    <Loader2 className="w-6 h-6 text-[#8B4513] animate-spin mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Loading...</p>
+                                </div>
+                            ) : recentPending.length === 0 ? (
+                                <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
+                                    No pending incidents
+                                </div>
+                            ) : (
+                                recentPending.map(incident => (
+                                    <IncidentPreviewCard
+                                        key={incident.id}
+                                        id={`#${incident.id?.slice(-6)}`}
+                                        location={incident.location.address}
+                                        severity={incident.severity}
+                                        date={incident.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                                        status={incident.status}
+                                    />
+                                ))
+                            )}
                         </div>
                     </motion.section>
 
@@ -287,7 +335,7 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
                             <ActionButton
                                 icon={<Eye size={20} />}
                                 title="Review Incidents"
-                                description="12 pending reviews"
+                                description={`${stats.pending} pending reviews`}
                                 onClick={() => onNavigate?.('incidents')}
                             />
                             <ActionButton
@@ -311,22 +359,46 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
 };
 
 // INCIDENTS PAGE
-const IncidentsPage: React.FC = () => {
+const IncidentsPage: React.FC<{ incidents: IncidentReport[]; loading: boolean }> = ({ incidents, loading }) => {
     const [selectedStatus, setSelectedStatus] = useState<string>('All');
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
+
+    const filteredIncidents = incidents.filter(incident => {
+        if (selectedStatus === 'All') return true;
+        return incident.status === selectedStatus;
+    });
+
+    const counts = {
+        All: incidents.length,
+        Pending: incidents.filter(i => i.status === 'Reported').length,
+        'Under Review': incidents.filter(i => i.status === 'Under Review').length,
+        'Action Taken': incidents.filter(i => i.status === 'Action Taken').length,
+        Resolved: incidents.filter(i => i.status === 'Resolved').length,
+    };
 
     const handleUpdateStatus = (incidentId: string) => {
         setSelectedIncident(incidentId);
         setShowStatusModal(true);
     };
 
-    const confirmStatusUpdate = (newStatus: string) => {
+    const confirmStatusUpdate = async (newStatus: string) => {
+        if (!selectedIncident) return;
         console.log(`Updating incident ${selectedIncident} to status: ${newStatus}`);
-        // In real implementation, this would call an API to update the status
-        setShowStatusModal(false);
-        setSelectedIncident(null);
+
+        try {
+            const { updateIncidentStatus } = await import('../services/incidentService');
+            // Mock gov user ID
+            await updateIncidentStatus(selectedIncident, newStatus as IncidentStatus, 'gov_user_1');
+            console.log('✅ Status updated successfully');
+        } catch (error) {
+            console.error('❌ Failed to update status:', error);
+            alert('Failed to update status');
+        } finally {
+            setShowStatusModal(false);
+            setSelectedIncident(null);
+        }
     };
 
     return (
@@ -353,31 +425,31 @@ const IncidentsPage: React.FC = () => {
                 <FilterChip
                     label="All"
                     active={selectedStatus === 'All'}
-                    count={45}
+                    count={counts.All}
                     onClick={() => setSelectedStatus('All')}
                 />
                 <FilterChip
                     label="Pending"
                     active={selectedStatus === 'Pending'}
-                    count={12}
+                    count={counts.Pending}
                     onClick={() => setSelectedStatus('Pending')}
                 />
                 <FilterChip
                     label="Under Review"
                     active={selectedStatus === 'Under Review'}
-                    count={5}
+                    count={counts['Under Review']}
                     onClick={() => setSelectedStatus('Under Review')}
                 />
                 <FilterChip
                     label="Action Taken"
                     active={selectedStatus === 'Action Taken'}
-                    count={8}
+                    count={counts['Action Taken']}
                     onClick={() => setSelectedStatus('Action Taken')}
                 />
                 <FilterChip
                     label="Resolved"
                     active={selectedStatus === 'Resolved'}
-                    count={20}
+                    count={counts.Resolved}
                     onClick={() => setSelectedStatus('Resolved')}
                 />
             </div>
@@ -394,41 +466,46 @@ const IncidentsPage: React.FC = () => {
 
             {/* Incident List */}
             <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Incident Reports</h2>
-            <div className="space-y-4">
-                <IncidentCard
-                    id="#1234"
-                    location="MG Road, Sector 5"
-                    date="Dec 23, 2024 - 2:30 PM"
-                    reporter="Anonymous"
-                    dogType="Stray"
-                    severity="Moderate"
-                    status="Reported"
-                    description="Dog showed aggressive behavior near school area. Multiple children present."
-                    onUpdateStatus={() => handleUpdateStatus('#1234')}
-                />
-                <IncidentCard
-                    id="#1233"
-                    location="Park Street, Block A"
-                    date="Dec 23, 2024 - 9:15 AM"
-                    reporter="Rajesh Kumar"
-                    dogType="Stray"
-                    severity="Severe"
-                    status="Under Review"
-                    description="Bite incident reported. Victim received medical attention. Pack of 3-4 dogs observed."
-                    onUpdateStatus={() => handleUpdateStatus('#1233')}
-                />
-                <IncidentCard
-                    id="#1230"
-                    location="Market Area, Zone 3"
-                    date="Dec 22, 2024 - 4:45 PM"
-                    reporter="Priya Sharma"
-                    dogType="Pet"
-                    severity="Minor"
-                    status="Reported"
-                    description="Pet dog without leash caused disturbance. Owner identified."
-                    onUpdateStatus={() => handleUpdateStatus('#1230')}
-                />
-            </div>
+            {loading ? (
+                <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                    <Loader2 className="w-10 h-10 text-[#8B4513] animate-spin mx-auto mb-4" />
+                    <p className="text-[#2D2424]/60">Loading incidents...</p>
+                </div>
+            ) : filteredIncidents.length === 0 ? (
+                <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                    <FileText className="w-16 h-16 text-[#2D2424]/10 mx-auto mb-4" />
+                    <p className="text-[#2D2424]/60">No incidents found for this category</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {filteredIncidents.map((incident) => (
+                        <IncidentCard
+                            key={incident.id}
+                            id={`#${incident.id?.slice(-6) || 'N/A'}`}
+                            location={incident.location.address}
+                            date={incident.createdAt?.toDate?.()?.toLocaleString() || 'Unknown Date'}
+                            reporter={incident.userName || 'Anonymous'}
+                            dogType={incident.dogType}
+                            severity={incident.severity}
+                            status={incident.status}
+                            description={incident.description}
+                            onUpdateStatus={() => handleUpdateStatus(incident.id!)}
+                            photos={incident.photos}
+                            victimAge={incident.victimAge}
+                            injuryLocation={incident.injuryLocation}
+                            medicalAttention={incident.medicalAttention}
+                            hospitalName={incident.hospitalName}
+                            activity={incident.activity}
+                            provocation={incident.provocation}
+                            witnessPresent={incident.witnessPresent}
+                            witnessContact={incident.witnessContact}
+                            rabiesConcern={incident.rabiesConcern}
+                            repeatOffender={incident.repeatOffender}
+                            childrenAtRisk={incident.childrenAtRisk}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Update Status Modal */}
             {showStatusModal && (
@@ -711,67 +788,208 @@ const IncidentCard: React.FC<{
     status: string;
     description: string;
     onUpdateStatus?: () => void;
-}> = ({ id, location, date, reporter, dogType, severity, status, description, onUpdateStatus }) => (
-    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-            <div>
-                <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-[#2D2424]">{id}</h3>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'Resolved' ? 'bg-[#8AB17D]/20 text-[#8AB17D]' :
-                        status === 'Action Taken' ? 'bg-[#8B4513]/20 text-[#8B4513]' :
-                            status === 'Under Review' ? 'bg-[#E9C46A]/30 text-[#BC6C25]' :
-                                'bg-gray-100 text-gray-700'
-                        }`}>
-                        {status}
-                    </span>
+    photos?: string[];
+    victimAge?: string;
+    injuryLocation?: string;
+    medicalAttention?: boolean;
+    hospitalName?: string;
+    activity?: string;
+    provocation?: string;
+    witnessPresent?: boolean;
+    witnessContact?: string;
+    rabiesConcern?: boolean;
+    repeatOffender?: boolean;
+    childrenAtRisk?: boolean;
+}> = ({
+    id, location, date, reporter, dogType, severity, status, description, onUpdateStatus,
+    photos = [], victimAge, injuryLocation, medicalAttention, hospitalName, activity,
+    provocation, witnessPresent, witnessContact, rabiesConcern, repeatOffender, childrenAtRisk
+}) => {
+        const [isExpanded, setIsExpanded] = useState(false);
+
+        return (
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
+                <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-bold text-[#2D2424]">{id}</h3>
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'Resolved' ? 'bg-[#8AB17D]/20 text-[#8AB17D]' :
+                                status === 'Action Taken' ? 'bg-[#8B4513]/20 text-[#8B4513]' :
+                                    status === 'Under Review' ? 'bg-[#E9C46A]/30 text-[#BC6C25]' :
+                                        'bg-gray-100 text-gray-700'
+                                }`}>
+                                {status}
+                            </span>
+                        </div>
+                        <p className="text-sm text-[#2D2424]/60 flex items-center gap-2 mb-1">
+                            <MapPin size={14} />
+                            {location}
+                        </p>
+                        <p className="text-xs text-[#2D2424]/40">{date}</p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-[#2D2424] rounded-xl font-semibold transition-colors flex items-center gap-2"
+                        >
+                            <Eye size={18} />
+                            {isExpanded ? 'Hide Details' : 'View Details'}
+                        </button>
+                        <button
+                            onClick={onUpdateStatus}
+                            className="px-6 py-3 bg-[#8B4513] text-white rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center gap-2"
+                        >
+                            <Edit size={18} />
+                            Update Status
+                        </button>
+                    </div>
                 </div>
-                <p className="text-sm text-[#2D2424]/60 flex items-center gap-2 mb-1">
-                    <MapPin size={14} />
-                    {location}
-                </p>
-                <p className="text-xs text-[#2D2424]/40">{date}</p>
-            </div>
-            <div className="flex gap-3">
-                <button
-                    onClick={onUpdateStatus}
-                    className="px-6 py-3 bg-[#8B4513] text-white rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center gap-2"
-                >
-                    <Edit size={18} />
-                    Update Status
-                </button>
-            </div>
-        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
-            <div>
-                <p className="text-xs text-[#2D2424]/60 mb-1">Reporter</p>
-                <p className="font-semibold text-sm">{reporter}</p>
-            </div>
-            <div>
-                <p className="text-xs text-[#2D2424]/60 mb-1">Dog Type</p>
-                <p className="font-semibold text-sm">{dogType}</p>
-            </div>
-            <div>
-                <p className="text-xs text-[#2D2424]/60 mb-1">Severity</p>
-                <span className={`text-sm font-bold ${severity === 'Severe' ? 'text-[#BC6C25]' :
-                    severity === 'Moderate' ? 'text-[#8B4513]' :
-                        'text-[#8AB17D]'
-                    }`}>
-                    {severity}
-                </span>
-            </div>
-            <div>
-                <p className="text-xs text-[#2D2424]/60 mb-1">Photos</p>
-                <p className="font-semibold text-sm">2 attached</p>
-            </div>
-        </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
+                    <div>
+                        <p className="text-xs text-[#2D2424]/60 mb-1">Reporter</p>
+                        <p className="font-semibold text-sm">{reporter}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-[#2D2424]/60 mb-1">Dog Type</p>
+                        <p className="font-semibold text-sm">{dogType}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-[#2D2424]/60 mb-1">Severity</p>
+                        <span className={`text-sm font-bold ${severity === 'Severe' ? 'text-[#BC6C25]' :
+                            severity === 'Moderate' ? 'text-[#8B4513]' :
+                                'text-[#8AB17D]'
+                            }`}>
+                            {severity}
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-xs text-[#2D2424]/60 mb-1">Photos</p>
+                        <p className="font-semibold text-sm">{photos.length} attached</p>
+                    </div>
+                </div>
 
-        <div>
-            <p className="text-sm font-semibold text-[#2D2424] mb-2">Description</p>
-            <p className="text-sm text-[#2D2424]/70 leading-relaxed">{description}</p>
-        </div>
-    </div>
-);
+                <div>
+                    <p className="text-sm font-semibold text-[#2D2424] mb-2">Description</p>
+                    <p className="text-sm text-[#2D2424]/70 leading-relaxed">{description}</p>
+                </div>
+
+                {/* Expanded Details */}
+                {isExpanded && (
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                        {/* Photos Gallery */}
+                        {photos.length > 0 && (
+                            <div className="mb-6">
+                                <h4 className="text-sm font-semibold text-[#2D2424] mb-3">Incident Photos</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {photos.map((photo, index) => (
+                                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                                            <img
+                                                src={photo}
+                                                alt={`Incident photo ${index + 1}`}
+                                                className="w-full h-full object-cover hover:scale-110 transition-transform cursor-pointer"
+                                                onClick={() => window.open(photo, '_blank')}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Victim Information */}
+                        {(victimAge || injuryLocation || medicalAttention !== undefined) && (
+                            <div className="mb-6">
+                                <h4 className="text-sm font-semibold text-[#2D2424] mb-3">Victim Information</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-xl">
+                                    {victimAge && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Victim Age</p>
+                                            <p className="font-semibold text-sm">{victimAge}</p>
+                                        </div>
+                                    )}
+                                    {injuryLocation && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Injury Location</p>
+                                            <p className="font-semibold text-sm">{injuryLocation}</p>
+                                        </div>
+                                    )}
+                                    {medicalAttention !== undefined && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Medical Attention</p>
+                                            <p className="font-semibold text-sm">{medicalAttention ? 'Yes' : 'No'}</p>
+                                        </div>
+                                    )}
+                                    {hospitalName && (
+                                        <div className="col-span-2 md:col-span-3">
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Hospital</p>
+                                            <p className="font-semibold text-sm">{hospitalName}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Incident Context */}
+                        {(activity || provocation || witnessPresent !== undefined) && (
+                            <div className="mb-6">
+                                <h4 className="text-sm font-semibold text-[#2D2424] mb-3">Incident Context</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-amber-50 rounded-xl">
+                                    {activity && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Activity</p>
+                                            <p className="font-semibold text-sm">{activity}</p>
+                                        </div>
+                                    )}
+                                    {provocation && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Provocation</p>
+                                            <p className="font-semibold text-sm">{provocation}</p>
+                                        </div>
+                                    )}
+                                    {witnessPresent !== undefined && (
+                                        <div>
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Witness Present</p>
+                                            <p className="font-semibold text-sm">{witnessPresent ? 'Yes' : 'No'}</p>
+                                        </div>
+                                    )}
+                                    {witnessContact && (
+                                        <div className="col-span-2 md:col-span-3">
+                                            <p className="text-xs text-[#2D2424]/60 mb-1">Witness Contact</p>
+                                            <p className="font-semibold text-sm">{witnessContact}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Priority Indicators */}
+                        {(rabiesConcern || repeatOffender || childrenAtRisk) && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-[#2D2424] mb-3">Priority Indicators</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {rabiesConcern && (
+                                        <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
+                                            Rabies Concern
+                                        </span>
+                                    )}
+                                    {repeatOffender && (
+                                        <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
+                                            Repeat Offender
+                                        </span>
+                                    )}
+                                    {childrenAtRisk && (
+                                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
+                                            Children at Risk
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
 const AreaProgressBar: React.FC<{ area: string; completed: number; target: number }> = ({ area, completed, target }) => {
     const percentage = (completed / target) * 100;

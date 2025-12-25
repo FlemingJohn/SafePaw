@@ -120,7 +120,7 @@ export const submitIncident = async (
         const incidentData: Omit<IncidentReport, 'id'> = {
             userId: incident.userId,
             userName: incident.userName,
-            userPhone: incident.userPhone,
+            userPhone: incident.userPhone || null,
             location: {
                 address: incident.location.address,
                 coordinates: new GeoPoint(incident.location.lat, incident.location.lng),
@@ -135,27 +135,27 @@ export const submitIncident = async (
             updatedAt: Timestamp.now(),
 
             // Enhanced fields - Time & Date
-            incidentDateTime: incident.incidentDateTime,
+            incidentDateTime: incident.incidentDateTime || null,
 
             // Enhanced fields - Victim Information
-            victimAge: incident.victimAge,
-            injuryLocation: incident.injuryLocation,
-            medicalAttention: incident.medicalAttention,
-            hospitalName: incident.hospitalName,
+            victimAge: incident.victimAge || null,
+            injuryLocation: incident.injuryLocation || null,
+            medicalAttention: incident.medicalAttention ?? null,
+            hospitalName: incident.hospitalName || null,
 
             // Enhanced fields - Incident Context
-            activity: incident.activity,
-            provocation: incident.provocation,
-            witnessPresent: incident.witnessPresent,
-            witnessContact: incident.witnessContact,
+            activity: incident.activity || null,
+            provocation: incident.provocation || null,
+            witnessPresent: incident.witnessPresent ?? null,
+            witnessContact: incident.witnessContact || null,
 
             // Enhanced fields - Priority Indicators
-            rabiesConcern: incident.rabiesConcern,
-            repeatOffender: incident.repeatOffender,
-            childrenAtRisk: incident.childrenAtRisk,
+            rabiesConcern: incident.rabiesConcern ?? null,
+            repeatOffender: incident.repeatOffender ?? null,
+            childrenAtRisk: incident.childrenAtRisk ?? null,
 
             // Enhanced fields - Report Mode
-            reportMode: incident.reportMode,
+            reportMode: incident.reportMode || 'quick',
         };
 
         // Add to Firestore

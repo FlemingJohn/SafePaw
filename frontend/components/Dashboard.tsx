@@ -1161,34 +1161,76 @@ const HospitalCard: React.FC<{ name: string; distance: string; phone: string }> 
 
 const ReportCard: React.FC<{ id: string; date: string; location: string; status: string; severity: string }> = ({
   id, date, location, status, severity
-}) => (
-  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-    <div className="flex justify-between items-start mb-4">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <h3 className="font-bold text-lg text-[#2D2424]">Report {id}</h3>
-          <span className={`text-xs font-bold px-2 py-1 rounded-full ${status === 'Resolved' ? 'bg-green-100 text-green-700' :
-            status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
-              'bg-yellow-100 text-yellow-700'
-            }`}>
-            {status}
-          </span>
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="font-bold text-lg text-[#2D2424]">Report {id}</h3>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full ${status === 'Resolved' ? 'bg-green-100 text-green-700' :
+              status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+              {status}
+            </span>
+          </div>
+          <p className="text-sm text-[#2D2424]/60 mb-1">{location}</p>
+          <p className="text-xs text-[#2D2424]/40">{date}</p>
         </div>
-        <p className="text-sm text-[#2D2424]/60 mb-1">{location}</p>
-        <p className="text-xs text-[#2D2424]/40">{date}</p>
+        <span className="text-sm font-semibold text-[#BC6C25]">{severity}</span>
       </div>
-      <span className="text-sm font-semibold text-[#BC6C25]">{severity}</span>
+
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="text-[#8B4513] font-semibold text-sm hover:underline flex items-center gap-1"
+      >
+        {isExpanded ? (
+          <>Hide Details <ChevronRight size={16} className="rotate-90" /></>
+        ) : (
+          <>View Details <ChevronRight size={16} /></>
+        )}
+      </button>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+            <div>
+              <p className="text-xs text-[#2D2424]/60 mb-1">Report ID</p>
+              <p className="font-semibold text-sm">{id}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#2D2424]/60 mb-1">Date Reported</p>
+              <p className="font-semibold text-sm">{date}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#2D2424]/60 mb-1">Status</p>
+              <p className="font-semibold text-sm">{status}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[#2D2424]/60 mb-1">Severity</p>
+              <p className="font-semibold text-sm">{severity}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs text-[#2D2424]/60 mb-1">Location</p>
+              <p className="font-semibold text-sm">{location}</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-xl">
+            <p className="text-sm text-[#2D2424]/70">
+              <strong>Note:</strong> Your report has been received and is being reviewed by the Municipal Corporation.
+              You will receive updates as the status changes.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
-    <button
-      onClick={() => {
-        alert(`Report Details:\n\nReport ID: ${id}\nDate: ${date}\nLocation: ${location}\nStatus: ${status}\nSeverity: ${severity}\n\nFull report details will be available in a future update.`);
-      }}
-      className="text-[#8B4513] font-semibold text-sm hover:underline flex items-center gap-1"
-    >
-      View Details <ChevronRight size={16} />
-    </button>
-  </div>
-);
+  );
+};
 
 // Legal Aid Helper Components
 const RightCard: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({ icon, title, description }) => (

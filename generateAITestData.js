@@ -1,0 +1,271 @@
+// AI Test Data Generator for Firebase Firestore
+// Run: node generateAITestData.js > ai_test_data.json
+// Then import via Firebase Console
+
+const seedData = [];
+
+function randomOffset() {
+    return (Math.random() - 0.5) * 0.02;
+}
+
+const now = Date.now();
+
+// Incident 1: Severe child attack (HIGH PRIORITY)
+seedData.push({
+    userId: "ai_test_user_1",
+    userName: "John Doe",
+    userPhone: "+91 98765 43210",
+    location: {
+        address: "MG Road, Bangalore, Karnataka",
+        coordinates: {
+            _latitude: 12.9716,
+            _longitude: 77.5946
+        }
+    },
+    dogType: "Stray",
+    severity: "Severe",
+    description: "Large aggressive dog attacked a child. Immediate medical attention required.",
+    photos: [],
+    status: "Under Review",
+    createdAt: {
+        _seconds: Math.floor(now / 1000),
+        _nanoseconds: (now % 1000) * 1000000
+    },
+    updatedAt: {
+        _seconds: Math.floor(now / 1000),
+        _nanoseconds: (now % 1000) * 1000000
+    },
+    anonymous: false,
+    victimAge: "Child",
+    medicalAttention: true,
+    rabiesConcern: true,
+    childrenAtRisk: true,
+    priority: 9,
+    aiRecommendations: [
+        {
+            id: "rec_1",
+            agentType: "priority",
+            recommendation: "HIGH PRIORITY: Severe incident with child victim. Rabies concern detected. Immediate response required.",
+            confidence: 0.95,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(now / 1000),
+                _nanoseconds: (now % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_2",
+            agentType: "action",
+            recommendation: "DISPATCH: Emergency rescue team and animal control. Alert nearest hospital with rabies vaccine.",
+            confidence: 0.92,
+            status: "executed",
+            timestamp: {
+                _seconds: Math.floor(now / 1000),
+                _nanoseconds: (now % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_3",
+            agentType: "resource",
+            recommendation: "ASSIGNED: Rescue Team Alpha (2.3km away), Dr. Sharma (Veterinarian), City Hospital notified.",
+            confidence: 0.88,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(now / 1000),
+                _nanoseconds: (now % 1000) * 1000000
+            }
+        }
+    ]
+});
+
+// Incident 2: Moderate pet bite
+const oneHourAgo = now - (3600 * 1000);
+seedData.push({
+    userId: "ai_test_user_2",
+    userName: "Priya Sharma",
+    location: {
+        address: "Koramangala, Bangalore, Karnataka",
+        coordinates: {
+            _latitude: 12.9352,
+            _longitude: 77.6245
+        }
+    },
+    dogType: "Pet",
+    severity: "Moderate",
+    description: "Neighbor's dog bit me while I was jogging. Minor injury but concerned about rabies.",
+    photos: [],
+    status: "Action Taken",
+    createdAt: {
+        _seconds: Math.floor(oneHourAgo / 1000),
+        _nanoseconds: (oneHourAgo % 1000) * 1000000
+    },
+    updatedAt: {
+        _seconds: Math.floor(now / 1000),
+        _nanoseconds: (now % 1000) * 1000000
+    },
+    anonymous: false,
+    victimAge: "Adult",
+    medicalAttention: true,
+    rabiesConcern: true,
+    priority: 6,
+    aiRecommendations: [
+        {
+            id: "rec_4",
+            agentType: "priority",
+            recommendation: "MEDIUM PRIORITY: Pet dog incident with rabies concern. Schedule follow-up within 24 hours.",
+            confidence: 0.78,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(oneHourAgo / 1000),
+                _nanoseconds: (oneHourAgo % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_5",
+            agentType: "action",
+            recommendation: "COORDINATE: Contact pet owner for vaccination records. Schedule victim for rabies prophylaxis.",
+            confidence: 0.82,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(oneHourAgo / 1000),
+                _nanoseconds: (oneHourAgo % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_6",
+            agentType: "resource",
+            recommendation: "ASSIGNED: Animal Control Officer to verify pet vaccination status. Hospital appointment scheduled.",
+            confidence: 0.75,
+            status: "pending",
+            timestamp: {
+                _seconds: Math.floor(oneHourAgo / 1000),
+                _nanoseconds: (oneHourAgo % 1000) * 1000000
+            }
+        }
+    ]
+});
+
+// Incident 3: Minor stray barking
+const twoHoursAgo = now - (7200 * 1000);
+seedData.push({
+    userId: "ai_test_user_3",
+    userName: "Anonymous User",
+    location: {
+        address: "Indiranagar, Bangalore, Karnataka",
+        coordinates: {
+            _latitude: 12.9719,
+            _longitude: 77.6412
+        }
+    },
+    dogType: "Stray",
+    severity: "Minor",
+    description: "Stray dog barking aggressively at people in the park. No bites yet but concerning behavior.",
+    photos: [],
+    status: "Pending",
+    createdAt: {
+        _seconds: Math.floor(twoHoursAgo / 1000),
+        _nanoseconds: (twoHoursAgo % 1000) * 1000000
+    },
+    updatedAt: {
+        _seconds: Math.floor(twoHoursAgo / 1000),
+        _nanoseconds: (twoHoursAgo % 1000) * 1000000
+    },
+    anonymous: true,
+    priority: 4,
+    aiRecommendations: [
+        {
+            id: "rec_7",
+            agentType: "priority",
+            recommendation: "LOW PRIORITY: Preventive action recommended. Monitor situation for 48 hours.",
+            confidence: 0.65,
+            status: "pending",
+            timestamp: {
+                _seconds: Math.floor(twoHoursAgo / 1000),
+                _nanoseconds: (twoHoursAgo % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_8",
+            agentType: "action",
+            recommendation: "MONITOR: Schedule patrol in area. Consider ABC (Animal Birth Control) program enrollment.",
+            confidence: 0.70,
+            status: "overridden",
+            timestamp: {
+                _seconds: Math.floor(twoHoursAgo / 1000),
+                _nanoseconds: (twoHoursAgo % 1000) * 1000000
+            }
+        }
+    ]
+});
+
+// Incident 4: Critical elderly attack with ESCALATION (25 hours old)
+const twentyFiveHoursAgo = now - (90000 * 1000);
+const oneHourAgoFromNow = now - (3600 * 1000);
+seedData.push({
+    userId: "ai_test_user_4",
+    userName: "Rahul Kumar",
+    location: {
+        address: "Whitefield, Bangalore, Karnataka",
+        coordinates: {
+            _latitude: 12.9698,
+            _longitude: 77.7500
+        }
+    },
+    dogType: "Stray",
+    severity: "Severe",
+    description: "Pack of stray dogs attacked elderly person. Multiple bite wounds. Ambulance called.",
+    photos: [],
+    status: "Pending",
+    createdAt: {
+        _seconds: Math.floor(twentyFiveHoursAgo / 1000),
+        _nanoseconds: (twentyFiveHoursAgo % 1000) * 1000000
+    },
+    updatedAt: {
+        _seconds: Math.floor(twentyFiveHoursAgo / 1000),
+        _nanoseconds: (twentyFiveHoursAgo % 1000) * 1000000
+    },
+    anonymous: false,
+    victimAge: "Elderly",
+    medicalAttention: true,
+    rabiesConcern: true,
+    repeatOffender: true,
+    priority: 10,
+    escalationStatus: "escalated",
+    aiRecommendations: [
+        {
+            id: "rec_9",
+            agentType: "priority",
+            recommendation: "CRITICAL PRIORITY: Elderly victim, pack attack, multiple wounds. Maximum urgency.",
+            confidence: 0.98,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(twentyFiveHoursAgo / 1000),
+                _nanoseconds: (twentyFiveHoursAgo % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_10",
+            agentType: "escalation",
+            recommendation: "ESCALATED: Incident pending for >24 hours. Auto-contacted senior officials. SMS sent to district coordinator.",
+            confidence: 0.99,
+            status: "executed",
+            timestamp: {
+                _seconds: Math.floor(oneHourAgoFromNow / 1000),
+                _nanoseconds: (oneHourAgoFromNow % 1000) * 1000000
+            }
+        },
+        {
+            id: "rec_11",
+            agentType: "resource",
+            recommendation: "EMERGENCY DISPATCH: All available units. Veterinary team for pack capture. Hospital coordination active.",
+            confidence: 0.95,
+            status: "approved",
+            timestamp: {
+                _seconds: Math.floor(twentyFiveHoursAgo / 1000),
+                _nanoseconds: (twentyFiveHoursAgo % 1000) * 1000000
+            }
+        }
+    ]
+});
+
+console.log(JSON.stringify(seedData, null, 2));

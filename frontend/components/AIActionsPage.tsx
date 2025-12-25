@@ -15,7 +15,7 @@ import {
     Briefcase,
     Shield
 } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { AIRecommendation } from '../services/incidentService';
 
@@ -99,28 +99,100 @@ const AIActionsPage: React.FC = () => {
     });
     const [loading, setLoading] = useState(true);
 
+    // Generate mock AI recommendations for demo
+    const generateMockRecommendations = (incident: any, incidentId: string): any[] => {
+        const recommendations = [];
+        const now = new Date();
+
+        const priority = incident.severity === 'Severe' ? 9 : incident.severity === 'Moderate' ? 6 : 3;
+
+        // Priority Analyzer
+        recommendations.push({
+            id: `${incidentId}_priority`,
+            agentType: 'priority',
+            recommendation: `Priority Level: ${priority}/10 - ${priority >= 8 ? 'CRITICAL - Immediate action required' :
+                priority >= 5 ? 'HIGH - Action needed within 24 hours' :
+                    'MEDIUM - Schedule for review'
+                }`,
+            status: 'pending',
+            confidence: 0.92,
+            timestamp: now
+        });
+
+        // Action Coordinator
+        if (incident.severity === 'Severe') {
+            recommendations.push({
+                id: `${incidentId}_action`,
+                agentType: 'action',
+                recommendation: 'Dispatch animal control unit immediately. Alert nearby hospitals. Issue public safety warning for the area.',
+                status: 'pending',
+                confidence: 0.88,
+                timestamp: now
+            });
+        } else if (incident.severity === 'Moderate') {
+            recommendations.push({
+                id: `${incidentId}_action`,
+                agentType: 'action',
+                recommendation: 'Schedule animal control visit within 24 hours. Monitor area for additional incidents.',
+                status: 'pending',
+                confidence: 0.85,
+                timestamp: now
+            });
+        } else {
+            recommendations.push({
+                id: `${incidentId}_action`,
+                agentType: 'action',
+                recommendation: 'Add to routine patrol schedule. Assess for ABC program inclusion.',
+                status: 'processing',
+                confidence: 0.79,
+                timestamp: now
+            });
+        }
+
+        // Resource Manager
+        recommendations.push({
+            id: `${incidentId}_resource`,
+            agentType: 'resource',
+            recommendation: `Assign nearest animal control unit (Unit-3, 2.1 km away). Estimated response time: ${incident.severity === 'Severe' ? '15 minutes' : '2-4 hours'
+                }`,
+            status: 'processing',
+            confidence: 0.91,
+            timestamp: now
+        });
+
+        // Escalation Monitor (for severe cases)
+        if (incident.severity === 'Severe' || incident.rabiesConcern) {
+            recommendations.push({
+                id: `${incidentId}_escalation`,
+                agentType: 'escalation',
+                recommendation: 'ESCALATED: Severe incident - supervisor notification sent. Municipal health officer alerted.',
+                status: 'approved',
+                confidence: 0.95,
+                timestamp: now
+            });
+        }
+
+        return recommendations;
+    };
+
     useEffect(() => {
-        loadActionHistory();
-    }, []);
+        console.log('🤖 AIActionsPage: Setting up real-time listener...');
 
-    const loadActionHistory = async () => {
-        try {
-            setLoading(true);
+        const q = query(
+            collection(db, 'incidents'),
+            orderBy('createdAt', 'desc'),
+            limit(50)
+        );
 
-            // Fetch recent incidents with AI recommendations
-            const q = query(
-                collection(db, 'incidents'),
-                orderBy('createdAt', 'desc'),
-                limit(50)
-            );
-
-            const snapshot = await getDocs(q);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
             const actions: ActionHistory[] = [];
             let approved = 0, overridden = 0, pending = 0;
 
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
+
                 if (data.aiRecommendations && Array.isArray(data.aiRecommendations)) {
+                    // Incident has AI recommendations
                     data.aiRecommendations.forEach((rec: any) => {
                         actions.push({
                             id: rec.id || `${doc.id}_${rec.agentType}`,
@@ -129,6 +201,25 @@ const AIActionsPage: React.FC = () => {
                             action: rec.recommendation,
                             status: rec.status || 'pending',
                             timestamp: rec.timestamp?.toDate() || new Date(),
+                            confidence: rec.confidence
+                        });
+
+                        // Count statuses
+                        if (rec.status === 'approved' || rec.status === 'executed') approved++;
+                        else if (rec.status === 'overridden') overridden++;
+                        else pending++;
+                    });
+                } else {
+                    // Generate mock AI recommendations for demo
+                    const mockRecs = generateMockRecommendations(data, doc.id);
+                    mockRecs.forEach((rec: any) => {
+                        actions.push({
+                            id: rec.id,
+                            incidentId: doc.id,
+                            agentType: rec.agentType,
+                            action: rec.recommendation,
+                            status: rec.status,
+                            timestamp: rec.timestamp,
                             confidence: rec.confidence
                         });
 
@@ -147,12 +238,18 @@ const AIActionsPage: React.FC = () => {
                 overriddenActions: overridden,
                 pendingActions: pending
             });
-        } catch (error) {
-            console.error('Error loading action history:', error);
-        } finally {
             setLoading(false);
-        }
-    };
+            console.log(`✅ AIActionsPage: Received ${actions.length} AI actions in real-time`);
+        }, (error) => {
+            console.error('❌ AIActionsPage: listener error:', error);
+            setLoading(false);
+        });
+
+        return () => {
+            console.log('🤖 AIActionsPage: Cleaning up listener');
+            unsubscribe();
+        };
+    }, []);
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
@@ -177,7 +274,7 @@ const AIActionsPage: React.FC = () => {
                     title="Total Actions"
                     value={stats.totalActions}
                     icon={<Activity className="text-[#8B4513]" />}
-                    color="bg-[#E9C46A]/20"
+                    color="bg-[#8B4513]/10"
                 />
                 <StatCard
                     title="Approved"
@@ -203,7 +300,7 @@ const AIActionsPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-[#2D2424] mb-6">AI Agents</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
                 {AGENTS.map((agent) => (
-                    <AgentCard key={agent.id} agent={agent} />
+                    <AgentCard key={agent.id} agent={agent} actionHistory={actionHistory} />
                 ))}
             </div>
 
@@ -232,23 +329,79 @@ const AIActionsPage: React.FC = () => {
 };
 
 // Agent Card Component
-const AgentCard: React.FC<{ agent: typeof AGENTS[0] }> = ({ agent }) => {
+const AgentCard: React.FC<{ agent: typeof AGENTS[0]; actionHistory: ActionHistory[] }> = ({ agent, actionHistory }) => {
     const Icon = agent.icon;
+
+    // Count active actions for this agent
+    const activeActions = actionHistory.filter(a =>
+        a.agentType === agent.id && (a.status === 'pending' || a.status === 'processing')
+    ).length;
+
+    const isActive = activeActions > 0;
 
     return (
         <motion.div
             whileHover={{ y: -5 }}
-            className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100"
+            className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden"
         >
+            {/* Active Processing Indicator */}
+            {isActive && (
+                <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-transparent via-[#8B4513] to-transparent">
+                    <motion.div
+                        className="h-full w-20 bg-[#E9C46A]"
+                        animate={{ x: [-80, 400] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                </div>
+            )}
+
             <div className="flex items-start gap-4 mb-4">
-                <div className={`p-3 rounded-2xl`} style={{ backgroundColor: agent.bgColor }}>
-                    <Icon size={24} style={{ color: agent.color }} />
+                <div className="relative">
+                    <div className={`p-3 rounded-2xl`} style={{ backgroundColor: agent.bgColor }}>
+                        <Icon size={24} style={{ color: agent.color }} />
+                    </div>
+                    {/* Active pulse indicator */}
+                    {isActive && (
+                        <div className="absolute -top-1 -right-1">
+                            <span className="relative flex h-3 w-3">
+                                <span className={"animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"} style={{ backgroundColor: agent.color }}></span>
+                                <span className={"relative inline-flex rounded-full h-3 w-3"} style={{ backgroundColor: agent.color }}></span>
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold text-[#2D2424] mb-1">{agent.name}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-[#2D2424]">{agent.name}</h3>
+                        {isActive && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#8B4513]/10 text-[#8B4513] flex items-center gap-1">
+                                <Activity size={10} className="animate-pulse" />
+                                {activeActions} Active
+                            </span>
+                        )}
+                    </div>
                     <p className="text-sm text-[#2D2424]/60">{agent.description}</p>
                 </div>
             </div>
+
+            {/* Visual progress for active processing */}
+            {isActive && (
+                <div className="mb-4 p-3 rounded-xl" style={{ backgroundColor: agent.bgColor }}>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold" style={{ color: agent.color }}>Processing High-Priority Incidents</span>
+                        <span className="text-xs font-bold" style={{ color: agent.color }}>{activeActions}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/50 rounded-full overflow-hidden">
+                        <motion.div
+                            className="h-full"
+                            style={{ backgroundColor: agent.color }}
+                            initial={{ width: '0%' }}
+                            animate={{ width: '100%' }}
+                            transition={{ duration: 1.5, ease: "easeInOut" }}
+                        />
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-2">
                 <p className="text-xs font-semibold text-[#2D2424]/40 uppercase tracking-wider">Capabilities</p>
@@ -296,6 +449,8 @@ const ActionHistoryCard: React.FC<{ action: ActionHistory }> = ({ action }) => {
                 return 'bg-green-100 text-green-700';
             case 'overridden':
                 return 'bg-orange-100 text-orange-700';
+            case 'processing':
+                return 'bg-blue-100 text-blue-700';
             case 'pending':
                 return 'bg-gray-100 text-gray-700';
             default:

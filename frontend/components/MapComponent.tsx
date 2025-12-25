@@ -1,37 +1,13 @@
-
-import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { MapPin, Navigation, ZoomIn, ZoomOut, Loader2, AlertCircle } from 'lucide-react';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-
-// Note: Google Maps script handled via shared loader in `../lib/loadGoogleMaps` (dynamic import in the effect)
-
+import loadGoogleMaps from '../lib/loadGoogleMaps';
 
 // Google Maps type declarations
 declare global {
     interface Window {
-        google: typeof google;
-    }
-}
-
-declare namespace google.maps {
-    class Map {
-        constructor(element: HTMLElement, options: any);
-        setCenter(latLng: any): void;
-        setZoom(zoom: number): void;
-        getZoom(): number | undefined;
-    }
-    class Marker {
-        constructor(options: any);
-        setMap(map: Map | null): void;
-        addListener(event: string, handler: () => void): void;
-    }
-    class InfoWindow {
-        constructor(options: any);
-        open(map: Map, marker: Marker): void;
-    }
-    namespace SymbolPath {
-        const CIRCLE: any;
+        google: any;
     }
 }
 
@@ -42,314 +18,334 @@ interface IncidentMarker {
     severity: 'Minor' | 'Moderate' | 'Severe';
     location: string;
     date: string;
+    description: string;
+    type?: 'incident' | 'hospital';
+}
+
+interface MapCenter {
+    lat: number;
+    lng: number;
 }
 
 interface MapComponentProps {
     incidents?: IncidentMarker[];
-    center?: { lat: number; lng: number };
+    center?: MapCenter;
     zoom?: number;
     onMarkerClick?: (incident: IncidentMarker) => void;
+    showHospitals?: boolean;
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({
     incidents: propIncidents,
-    center = { lat: 12.9716, lng: 77.5946 }, // Bangalore
+    center = { lat: 12.9716, lng: 77.5946 },
     zoom = 12,
-    onMarkerClick
+    onMarkerClick,
+    showHospitals = true
 }) => {
     const mapRef = useRef<HTMLDivElement>(null);
-    const [map, setMap] = useState<google.maps.Map | null>(null);
-    const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+    const [map, setMap] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Stabilize props to prevent re-initialization loops
+    const initialCenter = React.useMemo(() => center, []);
+    const initialZoom = React.useMemo(() => zoom, []);
     const [incidents, setIncidents] = useState<IncidentMarker[]>([]);
+    const [hospitals, setHospitals] = useState<IncidentMarker[]>([]);
+    const markersRef = useRef<Map<string, any>>(new Map());
+    const infoWindowRef = useRef<any>(null);
+    const incidentsFetchedRef = useRef(false);
+    const hospitalsFetchedRef = useRef(false);
 
-    // Fetch incidents from Firestore
+    // Fetch incidents from Firestore real-time
     useEffect(() => {
-        const fetchIncidents = async () => {
+        if (propIncidents !== undefined) {
+            setIncidents(propIncidents || []);
+            return;
+        }
+
+        console.log('🗺️ MapComponent: Setting up real-time incident listener...');
+        let unsubscribe: (() => void) | undefined;
+
+        const setupListener = async () => {
             try {
+                const { onSnapshot, collection, query, orderBy, limit } = await import('firebase/firestore');
+                const { db } = await import('../lib/firebase');
+
                 const incidentsRef = collection(db, 'incidents');
-                const q = query(incidentsRef, orderBy('createdAt', 'desc'), limit(50));
-                const querySnapshot = await getDocs(q);
+                const q = query(incidentsRef, orderBy('createdAt', 'desc'), limit(100));
 
-                const fetchedIncidents: IncidentMarker[] = [];
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.location?.coordinates) {
-                        fetchedIncidents.push({
-                            id: doc.id,
-                            lat: data.location.coordinates.latitude || data.location.coordinates._lat,
-                            lng: data.location.coordinates.longitude || data.location.coordinates._long,
-                            severity: data.severity || 'Minor',
-                            location: data.location.address || 'Unknown Location',
-                            date: data.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown Date'
-                        });
-                    }
+                unsubscribe = onSnapshot(q, (snapshot) => {
+                    const fetchedIncidents: IncidentMarker[] = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        if (data.location?.coordinates) {
+                            fetchedIncidents.push({
+                                id: doc.id,
+                                lat: data.location.coordinates.latitude || data.location.coordinates._lat || data.location.coordinates._latitude,
+                                lng: data.location.coordinates.longitude || data.location.coordinates._long || data.location.coordinates._longitude,
+                                severity: data.severity || 'Minor',
+                                location: data.location.address || 'Unknown Location',
+                                date: data.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown Date',
+                                description: data.description || 'No description',
+                                type: 'incident'
+                            });
+                        }
+                    });
+                    setIncidents(fetchedIncidents);
+                    console.log(`✅ MapComponent: Received ${fetchedIncidents.length} incidents in real-time`);
+                }, (err) => {
+                    console.error('❌ MapComponent: listener error:', err);
                 });
-
-                setIncidents(fetchedIncidents);
-                console.log(`Loaded ${fetchedIncidents.length} incidents from Firestore`);
             } catch (err) {
-                console.error('Error fetching incidents:', err);
-                // Use prop incidents or empty array as fallback
-                setIncidents(propIncidents || []);
+                console.error('❌ MapComponent: import error:', err);
             }
         };
 
-        fetchIncidents();
+        setupListener();
+
+        return () => {
+            if (unsubscribe) {
+                console.log('🗺️ MapComponent: Cleaning up listener');
+                unsubscribe();
+            }
+        };
     }, [propIncidents]);
 
-    // Initialize Google Maps using a shared loader promise — only once
+    // Fetch hospitals (optional)
     useEffect(() => {
-        let cancelled = false;
-        const initialized = (mapRef as any).current && (mapRef as any).current.dataset?.mapInitialized;
+        if (!showHospitals || hospitalsFetchedRef.current) return;
+        hospitalsFetchedRef.current = true;
 
+        const fetchHospitals = async () => {
+            console.log('🏥 MapComponent: Fetching hospitals...');
+            try {
+                // We use incidentService's helper
+                const { getNearbyHospitals } = await import('../services/incidentService');
+                const hospitalData = await getNearbyHospitals(initialCenter.lat, initialCenter.lng);
+
+                const mappedHospitals: IncidentMarker[] = hospitalData.map(h => ({
+                    id: h.id,
+                    lat: h.location.lat,
+                    lng: h.location.lng,
+                    severity: 'Minor', // Not applicable to hospitals but type-safe
+                    location: h.name,
+                    date: 'Emergency Service',
+                    description: h.address + '\nPhone: ' + h.phone,
+                    type: 'hospital'
+                }));
+
+                setHospitals(mappedHospitals);
+                console.log(`✅ Loaded ${mappedHospitals.length} hospitals`);
+            } catch (err) {
+                console.error('❌ Error fetching hospitals:', err);
+            }
+        };
+
+        fetchHospitals();
+    }, [showHospitals, initialCenter]);
+
+    // Initialize Map Script
+    useEffect(() => {
+        let isMounted = true;
         const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
-            console.warn('MapComponent: missing API key');
-            setError('Google Maps API key not configured');
-            setIsLoading(false);
-            return;
+
+        const initMapInstance = async () => {
+            if (!mapRef.current) return;
+
+            try {
+                console.log('🗺️ MapComponent: Loading Google Maps API...');
+                const google = await loadGoogleMaps(apiKey);
+
+                if (!isMounted || !mapRef.current) return;
+
+                console.log('🗺️ MapComponent: Initializing map instance...');
+                const mapInstance = new google.maps.Map(mapRef.current, {
+                    center: initialCenter,
+                    zoom: initialZoom,
+                    disableDefaultUI: true,
+                    styles: [
+                        { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+                        { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+                        { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
+                        { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
+                        { "featureType": "administrative.land_parcel", "elementType": "labels.text.fill", "stylers": [{ "color": "#bdbdbd" }] },
+                        { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#eeeeee" }] },
+                        { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
+                        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] },
+                        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#c9c9c9" }] },
+                    ],
+                });
+
+                infoWindowRef.current = new google.maps.InfoWindow();
+                setMap(mapInstance);
+                setIsLoading(false);
+                console.log('✅ MapComponent: Map initialized successfully');
+            } catch (err: any) {
+                if (!isMounted) return;
+                console.error('❌ MapComponent: Init error:', err);
+                setError(err.message || 'Failed to initialize map');
+                setIsLoading(false);
+            }
+        };
+
+        if (isLoading && !map) {
+            initMapInstance();
         }
 
-        // Load the script once and initialize map only if not already initialized
-        import('../lib/loadGoogleMaps')
-            .then(({ default: loadGoogleMaps }) => {
-                console.debug('MapComponent: calling loadGoogleMaps');
-                return loadGoogleMaps(apiKey, ['places'], 15000);
-            })
-            .then(() => {
-                if (cancelled) return;
-
-                // If map already initialized, just update center/zoom
-                if (map) {
-                    try {
-                        map.setCenter(center as any);
-                        map.setZoom(zoom);
-                        setIsLoading(false);
-                        return;
-                    } catch (err) {
-                        console.warn('MapComponent: failed to update existing map center/zoom', err);
-                    }
-                }
-
-                if (!mapRef.current) {
-                    setError('Map container not available');
-                    setIsLoading(false);
-                    return;
-                }
-
-                try {
-                    const mapInstance = new window.google.maps.Map(mapRef.current!, {
-                        center,
-                        zoom,
-                        styles: [
-                            {
-                                featureType: 'poi',
-                                elementType: 'labels',
-                                stylers: [{ visibility: 'off' }]
-                            }
-                        ],
-                        mapTypeControl: true,
-                        streetViewControl: false,
-                        fullscreenControl: true,
-                    });
-
-                    // mark DOM node to avoid duplicate initialization by other mounts
-                    (mapRef.current as any).dataset = (mapRef.current as any).dataset || {};
-                    (mapRef.current as any).dataset.mapInitialized = 'true';
-
-                    setMap(mapInstance);
-                    setIsLoading(false);
-                } catch (err) {
-                    console.error('Map initialization error:', err);
-                    setError('Failed to initialize map');
-                    setIsLoading(false);
-                }
-            })
-            .catch((err: any) => {
-                console.error('Map Component load failure:', err);
-                setError(err?.message || 'Failed to load Google Maps. Check your API key and network.');
-                setIsLoading(false);
-            });
-
         return () => {
-            cancelled = true;
+            isMounted = false;
         };
-        // Intentionally only run once on mount
-    }, []);
+    }, [initialCenter, initialZoom, isLoading, map]);
 
-    // Add markers to map (batched to avoid blocking UI)
+    // Update markers when incidents/hospitals or map changes
     useEffect(() => {
-        if (!map) return;
+        if (!map || !window.google) return;
 
-        // Cancel token for batched creation
-        let cancelled = false;
-        const idle = (window as any).requestIdleCallback || function (cb: any) { return setTimeout(cb, 0); };
-        const clearIdle = (handler: any) => { if (handler && (window as any).cancelIdleCallback) (window as any).cancelIdleCallback(handler); else clearTimeout(handler); };
+        const allMarkers = [...incidents, ...hospitals];
 
-        // Clear existing markers
-        markers.forEach(marker => {
-            try { marker.setMap(null); } catch (e) { /* ignore */ }
+        // Clear markers not in the new list
+        const currentIds = new Set(allMarkers.map(i => i.id));
+        markersRef.current.forEach((marker, id) => {
+            if (!currentIds.has(id)) {
+                marker.setMap(null);
+                markersRef.current.delete(id);
+            }
         });
 
-        if (incidents.length === 0) {
-            setMarkers([]);
-            return;
-        }
+        // Add or update markers
+        allMarkers.forEach(incident => {
+            if (markersRef.current.has(incident.id)) return;
 
-        const newMarkers: google.maps.Marker[] = [];
-        const batchSize = 15;
-        let idx = 0;
-        let idleHandle: any = null;
+            let color = '#ef4444'; // Red for Severe
+            if (incident.type === 'hospital') {
+                color = '#2563eb'; // Blue for Hospitals
+            } else {
+                color = incident.severity === 'Severe' ? '#ef4444' : incident.severity === 'Moderate' ? '#f59e0b' : '#10b981';
+            }
 
-        const createBatch = () => {
-            if (cancelled) return;
-            const end = Math.min(idx + batchSize, incidents.length);
+            const marker = new window.google.maps.Marker({
+                position: { lat: incident.lat, lng: incident.lng },
+                map,
+                title: incident.location,
+                icon: {
+                    path: window.google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: color,
+                    fillOpacity: 0.9,
+                    strokeWeight: 2,
+                    strokeColor: '#ffffff'
+                },
+                animation: window.google.maps.Animation.DROP
+            });
 
-            for (; idx < end; idx++) {
-                const incident = incidents[idx];
-                try {
-                    const marker = new google.maps.Marker({
-                        position: { lat: incident.lat, lng: incident.lng },
-                        map,
-                        title: incident.location,
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 10,
-                            fillColor: incident.severity === 'Severe' ? '#DC2626' :
-                                incident.severity === 'Moderate' ? '#F59E0B' : '#10B981',
-                            fillOpacity: 0.8,
-                            strokeColor: '#FFFFFF',
-                            strokeWeight: 2,
-                        },
+            marker.addListener('click', () => {
+                if (onMarkerClick) onMarkerClick(incident);
+
+                const contentString = `
+                    <div style="padding: 12px; min-width: 200px;">
+                        <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #1e293b;">${incident.location}</div>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></span>
+                            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${color};">${incident.severity}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; line-height: 1.4;">${incident.description}</div>
+                        <div style="margin-top: 8px; font-size: 10px; color: #94a3b8;">${incident.date}</div>
+                    </div>
+                `;
+
+                infoWindowRef.current.setContent(contentString);
+                infoWindowRef.current.open(map, marker);
+            });
+
+            markersRef.current.set(incident.id, marker);
+        });
+
+        // Fit bounds to markers if they exist and it's the first load
+        if (allMarkers.length > 0 && map && window.google) {
+            const bounds = new window.google.maps.LatLngBounds();
+            allMarkers.forEach(m => bounds.extend({ lat: m.lat, lng: m.lng }));
+
+            // Only fit bounds if we haven't done it yet for this map instance
+            if (!map.__boundsFitted) {
+                map.fitBounds(bounds);
+                map.__boundsFitted = true;
+
+                // Don't zoom in too much if there's only one marker
+                if (allMarkers.length === 1) {
+                    const listener = window.google.maps.event.addListener(map, 'idle', () => {
+                        if (map.getZoom() > 15) map.setZoom(15);
+                        window.google.maps.event.removeListener(listener);
                     });
-
-                    marker.addListener('click', () => {
-                        if (onMarkerClick) onMarkerClick(incident);
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: `
-            <div style="padding: 8px; font-family: Inter, sans-serif;">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #2D2424;">
-                ${incident.location}
-              </h3>
-              <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">
-                <strong>Severity:</strong> 
-                <span style="color: ${incident.severity === 'Severe' ? '#DC2626' :
-                            incident.severity === 'Moderate' ? '#F59E0B' : '#10B981'}">
-                  ${incident.severity}
-                </span>
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #999;">
-                ${incident.date}
-              </p>
-            </div>
-          `,
-                        });
-                        infoWindow.open(map, marker);
-                    });
-
-                    newMarkers.push(marker);
-                } catch (e) {
-                    console.warn('Failed to create marker for incident', incident, e);
                 }
             }
+        }
 
-            // If more to create, schedule next batch
-            if (idx < incidents.length) {
-                idleHandle = idle(createBatch);
-            } else {
-                setMarkers(newMarkers);
-            }
-        };
+    }, [map, incidents, hospitals, onMarkerClick]);
 
-        // Start first batch
-        idleHandle = idle(createBatch);
+    const handleZoomIn = () => map?.setZoom((map.getZoom() || 12) + 1);
+    const handleZoomOut = () => map?.setZoom((map.getZoom() || 12) - 1);
 
-        return () => {
-            cancelled = true;
-            if (idleHandle) clearIdle(idleHandle);
-            // remove markers we created
-            newMarkers.forEach(m => { try { m.setMap(null); } catch (e) { } });
-        };
-    }, [map, incidents, onMarkerClick]);
+    const handleRecenter = useCallback(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                map?.panTo(coords);
+                map?.setZoom(15);
+            });
+        }
+    }, [map]);
 
-    // Show loading state
-    if (isLoading) {
-        return (
-            <div className="w-full h-full bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#8B4513] border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-sm text-[#2D2424]/60">Loading map...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show error state
     if (error) {
         return (
-            <div className="w-full h-full bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl flex items-center justify-center">
-                <div className="text-center p-8">
-                    <MapPin size={48} className="mx-auto text-[#8B4513] mb-4" />
-                    <h3 className="text-lg font-bold text-[#2D2424] mb-2">Map Unavailable</h3>
-                    <p className="text-sm text-[#2D2424]/60 mb-4">{error}</p>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
-                        <p className="text-xs text-yellow-800 mb-2"><strong>To enable Google Maps:</strong></p>
-                        <ol className="text-xs text-yellow-700 space-y-1 ml-4">
-                            <li>1. Get a Google Maps API key from Google Cloud Console</li>
-                            <li>2. Add it to your .env file as VITE_GOOGLE_MAPS_API_KEY</li>
-                            <li>3. Refresh the page</li>
-                        </ol>
-                    </div>
+            <div className="w-full h-full bg-slate-100 flex items-center justify-center rounded-xl border-2 border-dashed border-slate-300">
+                <div className="text-center px-6">
+                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-slate-800">Map Error</h3>
+                    <p className="text-slate-500 max-w-md text-sm">{error}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="relative w-full h-full rounded-2xl overflow-hidden">
-            <div ref={mapRef} className="w-full h-full" />
+        <div className="relative w-full h-full overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+            {isLoading && (
+                <div className="absolute inset-0 z-10 bg-slate-50/80 flex items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
+                        <span className="text-slate-600 font-medium">Loading Map Assets...</span>
+                    </div>
+                </div>
+            )}
 
-            {/* Map Controls Overlay */}
-            <div className="absolute top-4 right-4 flex flex-col gap-2">
-                <button
-                    onClick={() => map?.setZoom((map.getZoom() || 12) + 1)}
-                    className="bg-white p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-                >
-                    <ZoomIn size={20} className="text-[#2D2424]" />
-                </button>
-                <button
-                    onClick={() => map?.setZoom((map.getZoom() || 12) - 1)}
-                    className="bg-white p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-                >
-                    <ZoomOut size={20} className="text-[#2D2424]" />
-                </button>
-                <button
-                    onClick={() => {
-                        if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition((position) => {
-                                const pos = {
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude,
-                                };
-                                map?.setCenter(pos);
-                                map?.setZoom(15);
-                            });
-                        }
-                    }}
-                    className="bg-white p-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-                >
-                    <Navigation size={20} className="text-[#8B4513]" />
-                </button>
-            </div>
+            <div ref={mapRef} className="w-full h-full bg-slate-100" />
 
-            {/* Incident Count Badge */}
-            <div className="absolute bottom-4 left-4 bg-white px-4 py-2 rounded-full shadow-lg">
-                <p className="text-sm font-semibold text-[#2D2424]">
-                    {incidents.length} Incidents Reported
-                </p>
-            </div>
+            {/* Controls */}
+            {!isLoading && (
+                <>
+                    <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        <button onClick={handleZoomIn} className="bg-white p-2 rounded-lg shadow-md hover:bg-slate-50 transition-colors border border-slate-100">
+                            <ZoomIn size={20} className="text-slate-700" />
+                        </button>
+                        <button onClick={handleZoomOut} className="bg-white p-2 rounded-lg shadow-md hover:bg-slate-50 transition-colors border border-slate-100">
+                            <ZoomOut size={20} className="text-slate-700" />
+                        </button>
+                        <button onClick={handleRecenter} className="bg-white p-2 rounded-lg shadow-md hover:bg-slate-50 transition-colors border border-slate-100 mt-2">
+                            <Navigation size={20} className="text-indigo-600" />
+                        </button>
+                    </div>
+
+                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md border border-slate-200 flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-xs font-bold text-slate-800 tracking-tight">LIVE MONITOR</span>
+                        </div>
+                        <div className="h-4 w-px bg-slate-200" />
+                        <span className="text-xs text-slate-500">{incidents.length} events detected</span>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
