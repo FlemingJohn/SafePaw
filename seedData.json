@@ -1,0 +1,542 @@
+[
+  {
+    "userId": "seed_user_0",
+    "userName": "Citizen 0",
+    "userPhone": "+91 98765 43210",
+    "location": {
+      "address": "Velachery, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.98301806877004,
+        "_longitude": 80.22588787843364
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in Velachery area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765370224,
+      "_nanoseconds": 470000000
+    },
+    "updatedAt": {
+      "_seconds": 1765370224,
+      "_nanoseconds": 470000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_1",
+    "userName": "Citizen 1",
+    "userPhone": "+91 98765 43211",
+    "location": {
+      "address": "Chromepet, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.956324852483663,
+        "_longitude": 80.13777118659512
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in Chromepet area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764679024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764679024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_2",
+    "userName": "Citizen 2",
+    "userPhone": "+91 98765 43212",
+    "location": {
+      "address": "Mylapore, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.043738130809711,
+        "_longitude": 80.25342205536842
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Moderate",
+    "description": "Incident reported in Mylapore area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": true,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764333424,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764333424,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_3",
+    "userName": "Citizen 3",
+    "userPhone": "+91 98765 43213",
+    "location": {
+      "address": "Anna Nagar, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.088627591810976,
+        "_longitude": 80.21597239724328
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Moderate",
+    "description": "Incident reported in Anna Nagar area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766579824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766579824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_4",
+    "userName": "Citizen 4",
+    "userPhone": "+91 98765 43214",
+    "location": {
+      "address": "Chromepet, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.944233680750475,
+        "_longitude": 80.14708887764681
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Minor",
+    "description": "Incident reported in Chromepet area. Minor incident, dog was quickly controlled.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765715824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765715824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_5",
+    "userName": "Citizen 5",
+    "userPhone": "+91 98765 43215",
+    "location": {
+      "address": "Mylapore, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.033257581042934,
+        "_longitude": 80.25284461807945
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Moderate",
+    "description": "Incident reported in Mylapore area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764851824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764851824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_6",
+    "userName": "Citizen 6",
+    "userPhone": "+91 98765 43216",
+    "location": {
+      "address": "Sholinganallur, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.89430104802687,
+        "_longitude": 80.22975038033289
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Severe",
+    "description": "Incident reported in Sholinganallur area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766407024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766407024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_7",
+    "userName": "Citizen 7",
+    "userPhone": "+91 98765 43217",
+    "location": {
+      "address": "Royapettah, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.061533679148138,
+        "_longitude": 80.27455195139079
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Moderate",
+    "description": "Incident reported in Royapettah area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766147824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766147824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_8",
+    "userName": "Citizen 8",
+    "userPhone": "+91 98765 43218",
+    "location": {
+      "address": "Anna Nagar, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.077478278780424,
+        "_longitude": 80.20796307223286
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Moderate",
+    "description": "Incident reported in Anna Nagar area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766147824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766147824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_9",
+    "userName": "Citizen 9",
+    "userPhone": "+91 98765 43219",
+    "location": {
+      "address": "Porur, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.043379178676144,
+        "_longitude": 80.16552570404656
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in Porur area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765543024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765543024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_10",
+    "userName": "Citizen 10",
+    "userPhone": "+91 98765 43220",
+    "location": {
+      "address": "ECR, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.842466156841894,
+        "_longitude": 80.23741517395747
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Minor",
+    "description": "Incident reported in ECR area. Minor incident, dog was quickly controlled.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765629424,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765629424,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_11",
+    "userName": "Citizen 11",
+    "userPhone": "+91 98765 43221",
+    "location": {
+      "address": "Anna Nagar, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.086082281553269,
+        "_longitude": 80.2126648358562
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Minor",
+    "description": "Incident reported in Anna Nagar area. Minor incident, dog was quickly controlled.",
+    "photos": [],
+    "anonymous": true,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765715824,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765715824,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_12",
+    "userName": "Citizen 12",
+    "userPhone": "+91 98765 43222",
+    "location": {
+      "address": "Sholinganallur, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.909564894244243,
+        "_longitude": 80.22175873786271
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Severe",
+    "description": "Incident reported in Sholinganallur area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765629424,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765629424,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_13",
+    "userName": "Citizen 13",
+    "userPhone": "+91 98765 43223",
+    "location": {
+      "address": "Chromepet, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.942256262173359,
+        "_longitude": 80.1415985678951
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Moderate",
+    "description": "Incident reported in Chromepet area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766234224,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766234224,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_14",
+    "userName": "Citizen 14",
+    "userPhone": "+91 98765 43224",
+    "location": {
+      "address": "OMR, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.93421759751833,
+        "_longitude": 80.2281675302091
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Minor",
+    "description": "Incident reported in OMR area. Minor incident, dog was quickly controlled.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1766407024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1766407024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_15",
+    "userName": "Citizen 15",
+    "userPhone": "+91 98765 43225",
+    "location": {
+      "address": "Porur, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.028248006445363,
+        "_longitude": 80.15161208237147
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in Porur area. Immediate attention required.",
+    "photos": [],
+    "anonymous": true,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1765888624,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1765888624,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_16",
+    "userName": "Citizen 16",
+    "userPhone": "+91 98765 43226",
+    "location": {
+      "address": "T Nagar, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.051478851930009,
+        "_longitude": 80.23819262850955
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in T Nagar area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764247024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764247024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_17",
+    "userName": "Citizen 17",
+    "userPhone": "+91 98765 43227",
+    "location": {
+      "address": "Royapettah, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 13.047318757310409,
+        "_longitude": 80.25625383059884
+      }
+    },
+    "dogType": "Pet",
+    "severity": "Severe",
+    "description": "Incident reported in Royapettah area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764506224,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764506224,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_18",
+    "userName": "Citizen 18",
+    "userPhone": "+91 98765 43228",
+    "location": {
+      "address": "Velachery, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.965708950640279,
+        "_longitude": 80.22801627179197
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Severe",
+    "description": "Incident reported in Velachery area. Immediate attention required.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764679024,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764679024,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  },
+  {
+    "userId": "seed_user_19",
+    "userName": "Citizen 19",
+    "userPhone": "+91 98765 43229",
+    "location": {
+      "address": "Chromepet, Chennai, Tamil Nadu",
+      "coordinates": {
+        "_latitude": 12.954178459171242,
+        "_longitude": 80.13955373774817
+      }
+    },
+    "dogType": "Stray",
+    "severity": "Moderate",
+    "description": "Incident reported in Chromepet area. Dog showed aggressive behavior.",
+    "photos": [],
+    "anonymous": false,
+    "status": "Reported",
+    "createdAt": {
+      "_seconds": 1764160624,
+      "_nanoseconds": 471000000
+    },
+    "updatedAt": {
+      "_seconds": 1764160624,
+      "_nanoseconds": 471000000
+    },
+    "reportMode": "quick"
+  }
+]
