@@ -98,17 +98,34 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     // Initialize Google Maps
     useEffect(() => {
+        console.log('🗺️ MapComponent: Initializing...');
+
         const initMap = () => {
-            if (!mapRef.current) return;
+            console.log('🗺️ MapComponent: initMap called');
+
+            if (!mapRef.current) {
+                console.warn('⚠️ MapComponent: mapRef.current is null, retrying in 100ms...');
+                // Retry after a short delay to let the DOM render
+                setTimeout(() => {
+                    if (mapRef.current) {
+                        initMap();
+                    } else {
+                        console.error('❌ MapComponent: mapRef still null after retry');
+                    }
+                }, 100);
+                return;
+            }
 
             try {
                 // Check if Google Maps is loaded
                 if (typeof google === 'undefined' || !google.maps) {
+                    console.error('❌ MapComponent: Google Maps not loaded');
                     setError('Google Maps not loaded. Please check API key.');
                     setIsLoading(false);
                     return;
                 }
 
+                console.log('✅ MapComponent: Creating Google Maps instance');
                 const mapInstance = new google.maps.Map(mapRef.current, {
                     center,
                     zoom,
@@ -126,8 +143,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
                 setMap(mapInstance);
                 setIsLoading(false);
+                console.log('✅ MapComponent: Map instance created successfully');
             } catch (err) {
-                console.error('Map initialization error:', err);
+                console.error('❌ MapComponent: Map initialization error:', err);
                 setError('Failed to initialize map');
                 setIsLoading(false);
             }
@@ -135,46 +153,52 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
         // Check if script already exists
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        console.log('🗺️ MapComponent: Existing script?', !!existingScript);
 
         // Load Google Maps script if not already loaded
         if (!window.google && !existingScript) {
             const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+            console.log('🗺️ MapComponent: API key exists?', !!apiKey);
 
             if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+                console.error('❌ MapComponent: Google Maps API key not configured');
                 setError('Google Maps API key not configured');
                 setIsLoading(false);
                 return;
             }
 
+            console.log('🗺️ MapComponent: Loading Google Maps script...');
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
             script.async = true;
             script.defer = true;
             script.onload = () => {
-                console.log('Google Maps loaded successfully');
+                console.log('✅ MapComponent: Google Maps script loaded successfully');
                 initMap();
             };
             script.onerror = () => {
+                console.error('❌ MapComponent: Failed to load Google Maps script');
                 setError('Failed to load Google Maps. Check your API key.');
                 setIsLoading(false);
             };
             document.head.appendChild(script);
         } else if (window.google) {
-            // Google Maps already loaded
+            console.log('✅ MapComponent: Google Maps already loaded');
             initMap();
         } else {
-            // Script is loading, wait for it
+            console.log('🗺️ MapComponent: Waiting for Google Maps to load...');
             const checkGoogle = setInterval(() => {
                 if (window.google) {
                     clearInterval(checkGoogle);
+                    console.log('✅ MapComponent: Google Maps now available');
                     initMap();
                 }
             }, 100);
 
-            // Timeout after 10 seconds
             setTimeout(() => {
                 clearInterval(checkGoogle);
                 if (!window.google) {
+                    console.error('❌ MapComponent: Google Maps loading timeout');
                     setError('Google Maps loading timeout');
                     setIsLoading(false);
                 }
@@ -184,10 +208,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     // Add markers to map
     useEffect(() => {
-        if (!map || incidents.length === 0) return;
+        if (!map) return;
 
         // Clear existing markers
         markers.forEach(marker => marker.setMap(null));
+
+        // If no incidents, just clear markers and return
+        if (incidents.length === 0) {
+            setMarkers([]);
+            return;
+        }
 
         // Create new markers
         const newMarkers = incidents.map(incident => {
