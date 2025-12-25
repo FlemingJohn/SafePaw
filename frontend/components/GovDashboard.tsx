@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AIActionsPage from './AIActionsPage';
+import MapComponent from './MapComponent';
 
 interface GovDashboardProps {
     onExit: () => void;
@@ -95,12 +96,6 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                         active={currentPage === 'abc'}
                         onClick={() => setCurrentPage('abc')}
                     />
-                    <SidebarItem
-                        icon={<BarChart3 size={20} />}
-                        label="Analytics & Reports"
-                        active={currentPage === 'analytics'}
-                        onClick={() => setCurrentPage('analytics')}
-                    />
                 </nav>
 
                 <button
@@ -139,11 +134,10 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                     animate="show"
                     className="flex-1 px-4 py-6 md:px-12 md:py-12"
                 >
-                    {currentPage === 'home' && <HomePage />}
+                    {currentPage === 'home' && <HomePage onNavigate={setCurrentPage} />}
                     {currentPage === 'incidents' && <IncidentsPage />}
                     {currentPage === 'ai-actions' && <AIActionsPage />}
                     {currentPage === 'abc' && <ABCPage />}
-                    {currentPage === 'analytics' && <AnalyticsPage />}
                 </motion.main>
             </div>
 
@@ -165,9 +159,9 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
                     onClick={() => setCurrentPage('ai-actions')}
                 />
                 <MobileNavItem
-                    icon={<BarChart3 size={22} />}
-                    active={currentPage === 'analytics'}
-                    onClick={() => setCurrentPage('analytics')}
+                    icon={<Scissors size={22} />}
+                    active={currentPage === 'abc'}
+                    onClick={() => setCurrentPage('abc')}
                 />
             </nav>
         </div>
@@ -175,7 +169,7 @@ const GovDashboard: React.FC<GovDashboardProps> = ({ onExit }) => {
 };
 
 // HOME PAGE
-const HomePage: React.FC = () => {
+const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate }) => {
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 }
@@ -294,16 +288,19 @@ const HomePage: React.FC = () => {
                                 icon={<Eye size={20} />}
                                 title="Review Incidents"
                                 description="12 pending reviews"
+                                onClick={() => onNavigate?.('incidents')}
                             />
                             <ActionButton
                                 icon={<Calendar size={20} />}
                                 title="Schedule ABC Drive"
                                 description="Plan sterilization"
+                                onClick={() => onNavigate?.('abc')}
                             />
                             <ActionButton
-                                icon={<Download size={20} />}
-                                title="Export Report"
-                                description="Download monthly data"
+                                icon={<Bot size={20} />}
+                                title="AI Actions"
+                                description="Automated incident processing"
+                                onClick={() => onNavigate?.('ai-actions')}
                             />
                         </div>
                     </section>
@@ -315,6 +312,23 @@ const HomePage: React.FC = () => {
 
 // INCIDENTS PAGE
 const IncidentsPage: React.FC = () => {
+    const [selectedStatus, setSelectedStatus] = useState<string>('All');
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+    const [showFilters, setShowFilters] = useState(false);
+
+    const handleUpdateStatus = (incidentId: string) => {
+        setSelectedIncident(incidentId);
+        setShowStatusModal(true);
+    };
+
+    const confirmStatusUpdate = (newStatus: string) => {
+        console.log(`Updating incident ${selectedIncident} to status: ${newStatus}`);
+        // In real implementation, this would call an API to update the status
+        setShowStatusModal(false);
+        setSelectedIncident(null);
+    };
+
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -323,27 +337,63 @@ const IncidentsPage: React.FC = () => {
                     <p className="text-[#2D2424]/60">Review and take action on reported incidents</p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-xl hover:border-[#8B4513] transition-colors">
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`flex items-center gap-2 px-4 py-2 border-2 rounded-xl transition-colors ${showFilters ? 'border-[#8B4513] bg-[#8B4513]/10' : 'border-gray-200 hover:border-[#8B4513]'
+                            }`}
+                    >
                         <Filter size={18} />
                         <span className="font-semibold text-sm">Filter</span>
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-[#8B4513] text-white rounded-xl hover:bg-[#6D3610] transition-colors">
-                        <Download size={18} />
-                        <span className="font-semibold text-sm">Export</span>
                     </button>
                 </div>
             </div>
 
             {/* Filters */}
             <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
-                <FilterChip label="All" active count={45} />
-                <FilterChip label="Pending" count={12} />
-                <FilterChip label="Under Review" count={5} />
-                <FilterChip label="Action Taken" count={8} />
-                <FilterChip label="Resolved" count={20} />
+                <FilterChip
+                    label="All"
+                    active={selectedStatus === 'All'}
+                    count={45}
+                    onClick={() => setSelectedStatus('All')}
+                />
+                <FilterChip
+                    label="Pending"
+                    active={selectedStatus === 'Pending'}
+                    count={12}
+                    onClick={() => setSelectedStatus('Pending')}
+                />
+                <FilterChip
+                    label="Under Review"
+                    active={selectedStatus === 'Under Review'}
+                    count={5}
+                    onClick={() => setSelectedStatus('Under Review')}
+                />
+                <FilterChip
+                    label="Action Taken"
+                    active={selectedStatus === 'Action Taken'}
+                    count={8}
+                    onClick={() => setSelectedStatus('Action Taken')}
+                />
+                <FilterChip
+                    label="Resolved"
+                    active={selectedStatus === 'Resolved'}
+                    count={20}
+                    onClick={() => setSelectedStatus('Resolved')}
+                />
+            </div>
+
+            {/* Map View */}
+            <div className="mb-8">
+                <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Live Risk Heatmap</h2>
+                <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
+                    <div className="h-[500px] rounded-2xl overflow-hidden">
+                        <MapComponent />
+                    </div>
+                </div>
             </div>
 
             {/* Incident List */}
+            <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Incident Reports</h2>
             <div className="space-y-4">
                 <IncidentCard
                     id="#1234"
@@ -354,6 +404,7 @@ const IncidentsPage: React.FC = () => {
                     severity="Moderate"
                     status="Reported"
                     description="Dog showed aggressive behavior near school area. Multiple children present."
+                    onUpdateStatus={() => handleUpdateStatus('#1234')}
                 />
                 <IncidentCard
                     id="#1233"
@@ -364,6 +415,7 @@ const IncidentsPage: React.FC = () => {
                     severity="Severe"
                     status="Under Review"
                     description="Bite incident reported. Victim received medical attention. Pack of 3-4 dogs observed."
+                    onUpdateStatus={() => handleUpdateStatus('#1233')}
                 />
                 <IncidentCard
                     id="#1230"
@@ -374,8 +426,36 @@ const IncidentsPage: React.FC = () => {
                     severity="Minor"
                     status="Reported"
                     description="Pet dog without leash caused disturbance. Owner identified."
+                    onUpdateStatus={() => handleUpdateStatus('#1230')}
                 />
             </div>
+
+            {/* Update Status Modal */}
+            {showStatusModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full">
+                        <h3 className="text-2xl font-bold text-[#2D2424] mb-4">Update Status</h3>
+                        <p className="text-[#2D2424]/60 mb-6">Select new status for incident {selectedIncident}</p>
+                        <div className="space-y-3">
+                            {['Under Review', 'Action Taken', 'Resolved'].map((status) => (
+                                <button
+                                    key={status}
+                                    onClick={() => confirmStatusUpdate(status)}
+                                    className="w-full bg-[#8B4513]/10 hover:bg-[#8B4513]/20 text-[#2D2424] py-3 px-4 rounded-xl font-semibold transition-colors text-left"
+                                >
+                                    {status}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setShowStatusModal(false)}
+                            className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-[#2D2424] py-3 px-4 rounded-xl font-semibold transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -406,14 +486,15 @@ const ABCPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Area-wise Breakdown */}
-            <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Area-wise Breakdown</h2>
+            {/* Severity-based Breakdown */}
+            <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Severity-based Breakdown</h2>
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
+                <p className="text-sm text-[#2D2424]/60 mb-6">Sterilization progress categorized by incident severity in affected areas</p>
                 <div className="space-y-4">
-                    <AreaProgressBar area="Zone 1 - North" completed={45} target={60} />
-                    <AreaProgressBar area="Zone 2 - South" completed={38} target={50} />
-                    <AreaProgressBar area="Zone 3 - East" completed={52} target={55} />
-                    <AreaProgressBar area="Zone 4 - West" completed={21} target={45} />
+                    <AreaProgressBar area="Severe Incident Areas" completed={52} target={60} />
+                    <AreaProgressBar area="Moderate Incident Areas" completed={45} target={55} />
+                    <AreaProgressBar area="Minor Incident Areas" completed={38} target={50} />
+                    <AreaProgressBar area="No Incident Areas" completed={21} target={35} />
                 </div>
             </div>
 
@@ -578,9 +659,9 @@ const IncidentPreviewCard: React.FC<{ id: string; location: string; severity: st
                     {location}
                 </p>
             </div>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${severity === 'Severe' ? 'bg-red-100 text-red-700' :
-                severity === 'Moderate' ? 'bg-orange-100 text-orange-700' :
-                    'bg-green-100 text-green-700'
+            <span className={`text-xs font-bold px-3 py-1 rounded-full ${severity === 'Severe' ? 'bg-[#BC6C25]/20 text-[#BC6C25]' :
+                severity === 'Moderate' ? 'bg-[#E9C46A]/30 text-[#8B4513]' :
+                    'bg-[#8AB17D]/20 text-[#8AB17D]'
                 }`}>
                 {severity}
             </span>
@@ -594,11 +675,12 @@ const IncidentPreviewCard: React.FC<{ id: string; location: string; severity: st
     </div>
 );
 
-const ActionButton: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({
-    icon, title, description
+const ActionButton: React.FC<{ icon: React.ReactNode; title: string; description: string; onClick?: () => void }> = ({
+    icon, title, description, onClick
 }) => (
     <motion.button
         whileHover={{ x: 5 }}
+        onClick={onClick}
         className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-[#8B4513] transition-all text-left"
     >
         <div className="flex items-center gap-3 mb-2">
@@ -609,9 +691,12 @@ const ActionButton: React.FC<{ icon: React.ReactNode; title: string; description
     </motion.button>
 );
 
-const FilterChip: React.FC<{ label: string; active?: boolean; count?: number }> = ({ label, active, count }) => (
-    <button className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors ${active ? 'bg-[#8B4513] text-white' : 'bg-white border-2 border-gray-200 hover:border-[#8B4513]'
-        }`}>
+const FilterChip: React.FC<{ label: string; active?: boolean; count?: number; onClick?: () => void }> = ({ label, active, count, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-colors ${active ? 'bg-[#8B4513] text-white' : 'bg-white border-2 border-gray-200 text-[#2D2424] hover:border-[#8B4513]'
+            }`}
+    >
         {label} {count !== undefined && `(${count})`}
     </button>
 );
@@ -625,15 +710,16 @@ const IncidentCard: React.FC<{
     severity: string;
     status: string;
     description: string;
-}> = ({ id, location, date, reporter, dogType, severity, status, description }) => (
+    onUpdateStatus?: () => void;
+}> = ({ id, location, date, reporter, dogType, severity, status, description, onUpdateStatus }) => (
     <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
             <div>
                 <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-xl font-bold text-[#2D2424]">{id}</h3>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'Resolved' ? 'bg-green-100 text-green-700' :
-                        status === 'Action Taken' ? 'bg-blue-100 text-blue-700' :
-                            status === 'Under Review' ? 'bg-yellow-100 text-yellow-700' :
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${status === 'Resolved' ? 'bg-[#8AB17D]/20 text-[#8AB17D]' :
+                        status === 'Action Taken' ? 'bg-[#8B4513]/20 text-[#8B4513]' :
+                            status === 'Under Review' ? 'bg-[#E9C46A]/30 text-[#BC6C25]' :
                                 'bg-gray-100 text-gray-700'
                         }`}>
                         {status}
@@ -646,7 +732,10 @@ const IncidentCard: React.FC<{
                 <p className="text-xs text-[#2D2424]/40">{date}</p>
             </div>
             <div className="flex gap-3">
-                <button className="px-6 py-3 bg-[#8B4513] text-white rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center gap-2">
+                <button
+                    onClick={onUpdateStatus}
+                    className="px-6 py-3 bg-[#8B4513] text-white rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center gap-2"
+                >
                     <Edit size={18} />
                     Update Status
                 </button>
@@ -664,9 +753,9 @@ const IncidentCard: React.FC<{
             </div>
             <div>
                 <p className="text-xs text-[#2D2424]/60 mb-1">Severity</p>
-                <span className={`text-sm font-bold ${severity === 'Severe' ? 'text-red-600' :
-                    severity === 'Moderate' ? 'text-orange-600' :
-                        'text-green-600'
+                <span className={`text-sm font-bold ${severity === 'Severe' ? 'text-[#BC6C25]' :
+                    severity === 'Moderate' ? 'text-[#8B4513]' :
+                        'text-[#8AB17D]'
                     }`}>
                     {severity}
                 </span>

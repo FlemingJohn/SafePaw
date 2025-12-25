@@ -97,7 +97,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
             label="My Reports"
             active={currentPage === 'myreports'}
             onClick={() => setCurrentPage('myreports')}
-            badge="3"
           />
         </nav>
 
@@ -734,21 +733,35 @@ const LegalPage: React.FC = () => {
   const [severity, setSeverity] = useState<'Minor' | 'Moderate' | 'Severe'>('Moderate');
 
   const calculateCompensation = () => {
-    const expense = parseInt(medicalExpense) || 0;
+    const medicalExpenses = parseInt(medicalExpense) || 0;
 
-    // Base compensation based on severity (realistic Indian court amounts)
-    const baseCompensation = severity === 'Severe' ? 200000 :
-      severity === 'Moderate' ? 75000 : 30000;
+    // Legal basis: Section 357 CrPC allows courts to order compensation
+    // Amounts based on typical Indian court awards for dog bite cases
 
-    // Pain & suffering (typically 50% of base)
-    const painSuffering = Math.floor(baseCompensation * 0.5);
+    // 1. Statutory fine under BNS 291 (max ₹5,000)
+    const statutoryFine = 5000;
 
-    // Total = Medical expenses + Base compensation + Pain & suffering
-    const total = expense + baseCompensation + painSuffering;
+    // 2. Medical expenses (actual costs incurred)
+    const medical = medicalExpenses;
+
+    // 3. Compensation for injury (based on severity and court precedents)
+    // Minor: Simple wounds, no permanent damage
+    // Moderate: Deep wounds, temporary disability, scarring
+    // Severe: Permanent disability, disfigurement, psychological trauma
+    const injuryCompensation = severity === 'Severe' ? 150000 :
+      severity === 'Moderate' ? 50000 : 15000;
+
+    // 4. Pain and suffering (typically awarded in civil suits)
+    const painSuffering = severity === 'Severe' ? 50000 :
+      severity === 'Moderate' ? 20000 : 10000;
+
+    // Total under Section 357 CrPC
+    const total = statutoryFine + medical + injuryCompensation + painSuffering;
 
     return {
-      medical: expense,
-      base: baseCompensation,
+      statutoryFine,
+      medical,
+      injuryCompensation,
       painSuffering,
       total
     };
@@ -769,7 +782,7 @@ const LegalPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[#2D2424]">Compensation Calculator</h2>
-            <p className="text-sm text-[#2D2424]/60">Estimate your eligible compensation under Indian law</p>
+            <p className="text-sm text-[#2D2424]/60">Based on Section 357 CrPC and Indian court precedents</p>
           </div>
         </div>
 
@@ -804,53 +817,77 @@ const LegalPage: React.FC = () => {
               type="number"
               value={medicalExpense}
               onChange={(e) => setMedicalExpense(e.target.value)}
-              placeholder="Enter amount"
+              placeholder="Enter actual medical costs"
               className="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#8B4513]/20"
             />
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6">
-          <p className="text-sm text-[#2D2424]/60 mb-4">Estimated Compensation Breakdown</p>
+          <p className="text-sm font-semibold text-[#2D2424] mb-4">Compensation Breakdown</p>
 
           <div className="space-y-3 mb-4">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-sm text-[#2D2424]/70">Medical Expenses</span>
+              <div>
+                <span className="text-sm text-[#2D2424] font-medium">Statutory Fine</span>
+                <p className="text-xs text-[#2D2424]/60">Under BNS Section 291</p>
+              </div>
+              <span className="font-semibold text-[#2D2424]">₹{compensation.statutoryFine.toLocaleString('en-IN')}</span>
+            </div>
+
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <div>
+                <span className="text-sm text-[#2D2424] font-medium">Medical Expenses</span>
+                <p className="text-xs text-[#2D2424]/60">Actual costs incurred</p>
+              </div>
               <span className="font-semibold text-[#2D2424]">₹{compensation.medical.toLocaleString('en-IN')}</span>
             </div>
+
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-sm text-[#2D2424]/70">Base Compensation ({severity})</span>
-              <span className="font-semibold text-[#2D2424]">₹{compensation.base.toLocaleString('en-IN')}</span>
+              <div>
+                <span className="text-sm text-[#2D2424] font-medium">Injury Compensation</span>
+                <p className="text-xs text-[#2D2424]/60">{severity} injury - Court precedent</p>
+              </div>
+              <span className="font-semibold text-[#2D2424]">₹{compensation.injuryCompensation.toLocaleString('en-IN')}</span>
             </div>
+
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-sm text-[#2D2424]/70">Pain & Suffering</span>
+              <div>
+                <span className="text-sm text-[#2D2424] font-medium">Pain & Suffering</span>
+                <p className="text-xs text-[#2D2424]/60">Civil suit damages</p>
+              </div>
               <span className="font-semibold text-[#2D2424]">₹{compensation.painSuffering.toLocaleString('en-IN')}</span>
             </div>
           </div>
 
           <div className="flex justify-between items-center pt-3 border-t-2 border-[#8B4513]/20">
-            <span className="text-lg font-bold text-[#2D2424]">Total Estimated</span>
+            <span className="text-lg font-bold text-[#2D2424]">Total Estimated Compensation</span>
             <span className="text-3xl font-bold text-[#8B4513]">₹{compensation.total.toLocaleString('en-IN')}</span>
           </div>
 
-          <div className="mt-4 bg-amber-50 rounded-lg p-3">
-            <p className="text-xs text-amber-900">
-              <strong>⚠️ Disclaimer:</strong> This is an estimate based on typical Indian court awards. Actual compensation depends on:
-            </p>
-            <ul className="text-xs text-amber-800 mt-2 ml-4 space-y-1">
-              <li>• Severity of injury and permanent disability</li>
-              <li>• Loss of income and earning capacity</li>
-              <li>• Court jurisdiction and precedents</li>
-              <li>• Evidence and documentation quality</li>
+          <div className="mt-4 bg-[#8B4513]/10 rounded-lg p-4 border border-[#8B4513]/20">
+            <p className="text-xs font-semibold text-[#8B4513] mb-2">Legal Basis</p>
+            <ul className="text-xs text-[#2D2424]/80 space-y-1">
+              <li>• Section 357 CrPC: Court-ordered compensation from fine amount</li>
+              <li>• Civil Suit: Additional damages for medical expenses, pain, and suffering</li>
+              <li>• Amounts based on typical awards in Indian courts for dog bite cases</li>
             </ul>
+          </div>
+
+          <div className="mt-3 bg-[#E9C46A]/20 rounded-lg p-4 border border-[#E9C46A]/40">
+            <p className="text-xs font-semibold text-[#8B4513] mb-2">Important Disclaimer</p>
+            <p className="text-xs text-[#2D2424]/80">
+              This is an estimate based on typical court awards. Actual compensation varies based on injury severity,
+              permanent disability, loss of income, court jurisdiction, and quality of evidence presented.
+            </p>
           </div>
         </div>
       </div>
 
       {/* Legal Framework */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-6 md:p-8 mb-8 border-2 border-blue-100">
+      <div className="bg-gradient-to-br from-[#8B4513]/10 to-[#E9C46A]/10 rounded-3xl p-6 md:p-8 mb-8 border-2 border-[#8B4513]/20">
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-blue-600 p-3 rounded-xl">
+          <div className="bg-[#8B4513] p-3 rounded-xl">
             <BookOpen size={24} className="text-white" />
           </div>
           <div>
@@ -864,9 +901,9 @@ const LegalPage: React.FC = () => {
           <p className="text-sm text-[#2D2424]/80 mb-4">
             Addresses negligent conduct of pet owners if their animal causes or is likely to cause danger to human life or grievous hurt.
           </p>
-          <div className="bg-blue-50 rounded-xl p-4 mb-4">
-            <p className="text-xs font-semibold text-blue-900 mb-2">⚖️ Important Note:</p>
-            <p className="text-xs text-blue-800">
+          <div className="bg-[#8B4513]/10 rounded-xl p-4 mb-4 border border-[#8B4513]/20">
+            <p className="text-xs font-semibold text-[#8B4513] mb-2">Important Note:</p>
+            <p className="text-xs text-[#2D2424]/80">
               As of July 1, 2024, the IPC has been replaced by the Bharatiya Nyaya Sanhita (BNS).
               IPC Section 289 is now covered by BNS Section 291.
             </p>
@@ -897,38 +934,38 @@ const LegalPage: React.FC = () => {
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
         <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Legal Actions for Victims</h2>
         <div className="space-y-4">
-          <div className="flex gap-4 p-4 bg-green-50 rounded-xl border-l-4 border-green-500">
-            <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
+          <div className="flex gap-4 p-4 bg-[#8AB17D]/10 rounded-xl border-l-4 border-[#8AB17D]">
+            <div className="flex-shrink-0 w-8 h-8 bg-[#8AB17D] rounded-full flex items-center justify-center text-white font-bold">1</div>
             <div>
               <h3 className="font-bold text-[#2D2424] mb-1">Seek Immediate Medical Attention</h3>
               <p className="text-sm text-[#2D2424]/70">Most crucial step, especially for anti-rabies vaccinations</p>
             </div>
           </div>
 
-          <div className="flex gap-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">2</div>
+          <div className="flex gap-4 p-4 bg-[#8B4513]/10 rounded-xl border-l-4 border-[#8B4513]">
+            <div className="flex-shrink-0 w-8 h-8 bg-[#8B4513] rounded-full flex items-center justify-center text-white font-bold">2</div>
             <div>
               <h3 className="font-bold text-[#2D2424] mb-1">File an FIR (First Information Report)</h3>
               <p className="text-sm text-[#2D2424]/70 mb-2">Lodge a police complaint under BNS Section 291 (formerly IPC 289) at the local police station</p>
               <p className="text-xs text-[#2D2424]/60 bg-white rounded-lg p-2">
-                💡 For grievous hurt: Additional charges under IPC Section 338 (Causing grievous hurt by act endangering life)
+                Note: For grievous hurt - Additional charges under IPC Section 338 (Causing grievous hurt by act endangering life)
               </p>
             </div>
           </div>
 
-          <div className="flex gap-4 p-4 bg-orange-50 rounded-xl border-l-4 border-orange-500">
-            <div className="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">3</div>
+          <div className="flex gap-4 p-4 bg-[#E9C46A]/20 rounded-xl border-l-4 border-[#E9C46A]">
+            <div className="flex-shrink-0 w-8 h-8 bg-[#E9C46A] rounded-full flex items-center justify-center text-[#2D2424] font-bold">3</div>
             <div>
               <h3 className="font-bold text-[#2D2424] mb-1">Seek Compensation</h3>
               <p className="text-sm text-[#2D2424]/70 mb-2">File a civil suit for damages covering medical expenses, emotional trauma, and financial burden</p>
               <p className="text-xs text-[#2D2424]/60 bg-white rounded-lg p-2">
-                ⚖️ Courts can order compensation from fine amount under Section 357 of CrPC
+                Courts can order compensation from fine amount under Section 357 of CrPC
               </p>
             </div>
           </div>
 
-          <div className="flex gap-4 p-4 bg-purple-50 rounded-xl border-l-4 border-purple-500">
-            <div className="flex-shrink-0 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">4</div>
+          <div className="flex gap-4 p-4 bg-[#8AB17D]/10 rounded-xl border-l-4 border-[#8AB17D]">
+            <div className="flex-shrink-0 w-8 h-8 bg-[#8AB17D] rounded-full flex items-center justify-center text-white font-bold">4</div>
             <div>
               <h3 className="font-bold text-[#2D2424] mb-1">Report to Municipal Authorities</h3>
               <p className="text-sm text-[#2D2424]/70">Keeping a pet without valid license or violating local municipal laws can lead to action by municipal corporation</p>
@@ -938,9 +975,9 @@ const LegalPage: React.FC = () => {
       </div>
 
       {/* Owner Responsibilities */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-6 md:p-8 mb-8 border-2 border-amber-100">
+      <div className="bg-gradient-to-br from-[#E9C46A]/20 to-[#8B4513]/10 rounded-3xl p-6 md:p-8 mb-8 border-2 border-[#E9C46A]/40">
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-amber-600 p-3 rounded-xl">
+          <div className="bg-[#8B4513] p-3 rounded-xl">
             <Shield size={24} className="text-white" />
           </div>
           <div>
@@ -1142,7 +1179,12 @@ const ReportCard: React.FC<{ id: string; date: string; location: string; status:
       </div>
       <span className="text-sm font-semibold text-[#BC6C25]">{severity}</span>
     </div>
-    <button className="text-[#8B4513] font-semibold text-sm hover:underline flex items-center gap-1">
+    <button
+      onClick={() => {
+        alert(`Report Details:\n\nReport ID: ${id}\nDate: ${date}\nLocation: ${location}\nStatus: ${status}\nSeverity: ${severity}\n\nFull report details will be available in a future update.`);
+      }}
+      className="text-[#8B4513] font-semibold text-sm hover:underline flex items-center gap-1"
+    >
       View Details <ChevronRight size={16} />
     </button>
   </div>

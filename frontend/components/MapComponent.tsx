@@ -4,6 +4,9 @@ import { MapPin, Navigation, ZoomIn, ZoomOut } from 'lucide-react';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+// Note: Google Maps script handled via shared loader in `../lib/loadGoogleMaps` (dynamic import in the effect)
+
+
 // Google Maps type declarations
 declare global {
     interface Window {
@@ -96,133 +99,136 @@ const MapComponent: React.FC<MapComponentProps> = ({
         fetchIncidents();
     }, [propIncidents]);
 
-    // Initialize Google Maps
+    // Initialize Google Maps using a shared loader promise — only once
     useEffect(() => {
-        const initMap = () => {
-            if (!mapRef.current) return;
+        let cancelled = false;
+        const initialized = (mapRef as any).current && (mapRef as any).current.dataset?.mapInitialized;
 
-            try {
-                // Check if Google Maps is loaded
-                if (typeof google === 'undefined' || !google.maps) {
-                    setError('Google Maps not loaded. Please check API key.');
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+            console.warn('MapComponent: missing API key');
+            setError('Google Maps API key not configured');
+            setIsLoading(false);
+            return;
+        }
+
+        // Load the script once and initialize map only if not already initialized
+        import('../lib/loadGoogleMaps')
+            .then(({ default: loadGoogleMaps }) => {
+                console.debug('MapComponent: calling loadGoogleMaps');
+                return loadGoogleMaps(apiKey, ['places'], 15000);
+            })
+            .then(() => {
+                if (cancelled) return;
+
+                // If map already initialized, just update center/zoom
+                if (map) {
+                    try {
+                        map.setCenter(center as any);
+                        map.setZoom(zoom);
+                        setIsLoading(false);
+                        return;
+                    } catch (err) {
+                        console.warn('MapComponent: failed to update existing map center/zoom', err);
+                    }
+                }
+
+                if (!mapRef.current) {
+                    setError('Map container not available');
                     setIsLoading(false);
                     return;
                 }
 
-                const mapInstance = new google.maps.Map(mapRef.current, {
-                    center,
-                    zoom,
-                    styles: [
-                        {
-                            featureType: 'poi',
-                            elementType: 'labels',
-                            stylers: [{ visibility: 'off' }]
-                        }
-                    ],
-                    mapTypeControl: true,
-                    streetViewControl: false,
-                    fullscreenControl: true,
-                });
+                try {
+                    const mapInstance = new window.google.maps.Map(mapRef.current!, {
+                        center,
+                        zoom,
+                        styles: [
+                            {
+                                featureType: 'poi',
+                                elementType: 'labels',
+                                stylers: [{ visibility: 'off' }]
+                            }
+                        ],
+                        mapTypeControl: true,
+                        streetViewControl: false,
+                        fullscreenControl: true,
+                    });
 
-                setMap(mapInstance);
-                setIsLoading(false);
-            } catch (err) {
-                console.error('Map initialization error:', err);
-                setError('Failed to initialize map');
-                setIsLoading(false);
-            }
-        };
+                    // mark DOM node to avoid duplicate initialization by other mounts
+                    (mapRef.current as any).dataset = (mapRef.current as any).dataset || {};
+                    (mapRef.current as any).dataset.mapInitialized = 'true';
 
-        // Check if script already exists
-        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-
-        // Load Google Maps script if not already loaded
-        if (!window.google && !existingScript) {
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-            if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
-                setError('Google Maps API key not configured');
-                setIsLoading(false);
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-            script.async = true;
-            script.defer = true;
-            script.onload = () => {
-                console.log('Google Maps loaded successfully');
-                initMap();
-            };
-            script.onerror = () => {
-                setError('Failed to load Google Maps. Check your API key.');
-                setIsLoading(false);
-            };
-            document.head.appendChild(script);
-        } else if (window.google) {
-            // Google Maps already loaded
-            initMap();
-        } else {
-            // Script is loading, wait for it
-            const checkGoogle = setInterval(() => {
-                if (window.google) {
-                    clearInterval(checkGoogle);
-                    initMap();
-                }
-            }, 50); // Check every 50ms instead of 100ms for faster response
-
-            // Timeout after 5 seconds instead of 10
-            setTimeout(() => {
-                clearInterval(checkGoogle);
-                if (!window.google) {
-                    setError('Google Maps loading timeout');
+                    setMap(mapInstance);
+                    setIsLoading(false);
+                } catch (err) {
+                    console.error('Map initialization error:', err);
+                    setError('Failed to initialize map');
                     setIsLoading(false);
                 }
-            }, 5000);
-        }
+            })
+            .catch((err: any) => {
+                console.error('Map Component load failure:', err);
+                setError(err?.message || 'Failed to load Google Maps. Check your API key and network.');
+                setIsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+        // Intentionally only run once on mount
     }, []);
 
-    // Add markers to map
+    // Add markers to map (batched to avoid blocking UI)
     useEffect(() => {
         if (!map) return;
 
-        // Early return if no incidents - don't process markers
+        // Cancel token for batched creation
+        let cancelled = false;
+        const idle = (window as any).requestIdleCallback || function (cb: any) { return setTimeout(cb, 0); };
+        const clearIdle = (handler: any) => { if (handler && (window as any).cancelIdleCallback) (window as any).cancelIdleCallback(handler); else clearTimeout(handler); };
+
+        // Clear existing markers
+        markers.forEach(marker => {
+            try { marker.setMap(null); } catch (e) { /* ignore */ }
+        });
+
         if (incidents.length === 0) {
-            // Clear any existing markers
-            markers.forEach(marker => marker.setMap(null));
             setMarkers([]);
             return;
         }
 
-        // Clear existing markers
-        markers.forEach(marker => marker.setMap(null));
+        const newMarkers: google.maps.Marker[] = [];
+        const batchSize = 15;
+        let idx = 0;
+        let idleHandle: any = null;
 
-        // Create new markers
-        const newMarkers = incidents.map(incident => {
-            const marker = new google.maps.Marker({
-                position: { lat: incident.lat, lng: incident.lng },
-                map,
-                title: incident.location,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: incident.severity === 'Severe' ? '#DC2626' :
-                        incident.severity === 'Moderate' ? '#F59E0B' : '#10B981',
-                    fillOpacity: 0.8,
-                    strokeColor: '#FFFFFF',
-                    strokeWeight: 2,
-                },
-            });
+        const createBatch = () => {
+            if (cancelled) return;
+            const end = Math.min(idx + batchSize, incidents.length);
 
-            // Add click listener
-            marker.addListener('click', () => {
-                if (onMarkerClick) {
-                    onMarkerClick(incident);
-                }
+            for (; idx < end; idx++) {
+                const incident = incidents[idx];
+                try {
+                    const marker = new google.maps.Marker({
+                        position: { lat: incident.lat, lng: incident.lng },
+                        map,
+                        title: incident.location,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: incident.severity === 'Severe' ? '#DC2626' :
+                                incident.severity === 'Moderate' ? '#F59E0B' : '#10B981',
+                            fillOpacity: 0.8,
+                            strokeColor: '#FFFFFF',
+                            strokeWeight: 2,
+                        },
+                    });
 
-                // Show info window
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
+                    marker.addListener('click', () => {
+                        if (onMarkerClick) onMarkerClick(incident);
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: `
             <div style="padding: 8px; font-family: Inter, sans-serif;">
               <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #2D2424;">
                 ${incident.location}
@@ -239,14 +245,33 @@ const MapComponent: React.FC<MapComponentProps> = ({
               </p>
             </div>
           `,
-                });
-                infoWindow.open(map, marker);
-            });
+                        });
+                        infoWindow.open(map, marker);
+                    });
 
-            return marker;
-        });
+                    newMarkers.push(marker);
+                } catch (e) {
+                    console.warn('Failed to create marker for incident', incident, e);
+                }
+            }
 
-        setMarkers(newMarkers);
+            // If more to create, schedule next batch
+            if (idx < incidents.length) {
+                idleHandle = idle(createBatch);
+            } else {
+                setMarkers(newMarkers);
+            }
+        };
+
+        // Start first batch
+        idleHandle = idle(createBatch);
+
+        return () => {
+            cancelled = true;
+            if (idleHandle) clearIdle(idleHandle);
+            // remove markers we created
+            newMarkers.forEach(m => { try { m.setMap(null); } catch (e) { } });
+        };
     }, [map, incidents, onMarkerClick]);
 
     // Show loading state

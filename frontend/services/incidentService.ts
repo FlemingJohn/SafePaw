@@ -204,7 +204,13 @@ export const getAllIncidents = async (): Promise<IncidentReport[]> => {
             ...doc.data()
         } as IncidentReport));
     } catch (error: any) {
-        throw new Error(`Failed to fetch incidents: ${error.message}`);
+        console.error('Firestore error fetching incidents:', error);
+        const msg = error?.message || String(error);
+        const match = msg.match(/https?:\/\/[^\s]+/);
+        if (msg.includes('requires an index') && match) {
+            throw new Error(`Failed to fetch incidents: query requires an index. Create it here: ${match[0]}`);
+        }
+        throw new Error(`Failed to fetch incidents: ${msg}`);
     }
 };
 
@@ -222,7 +228,13 @@ export const getUserReports = async (userId: string): Promise<IncidentReport[]> 
             ...doc.data()
         } as IncidentReport));
     } catch (error: any) {
-        throw new Error(`Failed to fetch user reports: ${error.message}`);
+        console.error('Firestore error fetching user reports:', error);
+        const umsg = error?.message || String(error);
+        const umatch = umsg.match(/https?:\/\/[^\s]+/);
+        if (umsg.includes('requires an index') && umatch) {
+            throw new Error(`Failed to fetch user reports: query requires an index. Create it here: ${umatch[0]}`);
+        }
+        throw new Error(`Failed to fetch user reports: ${umsg}`);
     }
 };
 
@@ -287,7 +299,13 @@ export const getIncidentsByStatus = async (status: IncidentStatus): Promise<Inci
             ...doc.data()
         } as IncidentReport));
     } catch (error: any) {
-        throw new Error(`Failed to fetch incidents by status: ${error.message}`);
+        console.error('Firestore error fetching incidents by status:', error);
+        const smsg = error?.message || String(error);
+        const smatch = smsg.match(/https?:\/\/[^\s]+/);
+        if (smsg.includes('requires an index') && smatch) {
+            throw new Error(`Failed to fetch incidents by status: query requires an index. Create it here: ${smatch[0]}`);
+        }
+        throw new Error(`Failed to fetch incidents by status: ${smsg}`);
     }
 };
 
@@ -305,7 +323,13 @@ export const getIncidentsBySeverity = async (severity: Severity): Promise<Incide
             ...doc.data()
         } as IncidentReport));
     } catch (error: any) {
-        throw new Error(`Failed to fetch incidents by severity: ${error.message}`);
+        console.error('Firestore error fetching incidents by severity:', error);
+        const vmsg = error?.message || String(error);
+        const vmatch = vmsg.match(/https?:\/\/[^\s]+/);
+        if (vmsg.includes('requires an index') && vmatch) {
+            throw new Error(`Failed to fetch incidents by severity: query requires an index. Create it here: ${vmatch[0]}`);
+        }
+        throw new Error(`Failed to fetch incidents by severity: ${vmsg}`);
     }
 };
 
@@ -353,6 +377,11 @@ export const checkRecentIncidents = async (
         return nearbyIncidents;
     } catch (error: any) {
         console.error('Error checking recent incidents:', error);
+        const msg = error?.message || String(error);
+        const match = msg.match(/https?:\/\/[^\s]+/);
+        if (msg.includes('requires an index') && match) {
+            console.error('Firestore query requires an index. Create it here:', match[0]);
+        }
         return []; // Return empty array on error to not block submission
     }
 };
@@ -401,6 +430,11 @@ export const checkDuplicateReport = async (
         return { isDuplicate: false };
     } catch (error: any) {
         console.error('Error checking duplicate:', error);
+        const msg = error?.message || String(error);
+        const match = msg.match(/https?:\/\/[^\s]+/);
+        if (msg.includes('requires an index') && match) {
+            console.error('Firestore query requires an index. Create it here:', match[0]);
+        }
         return { isDuplicate: false }; // Don't block on error
     }
 };
