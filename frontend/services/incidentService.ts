@@ -416,7 +416,6 @@ export interface Hospital {
     address: string;
     phone: string;
     distance?: number; // in km
-    vaccineAvailable: boolean;
 }
 
 export const getNearbyHospitals = async (
@@ -431,24 +430,21 @@ export const getNearbyHospitals = async (
             name: 'City General Hospital',
             location: { lat: lat + 0.01, lng: lng + 0.01 },
             address: '123 Main Street',
-            phone: '+91 98765 43210',
-            vaccineAvailable: true
+            phone: '+91 98765 43210'
         },
         {
             id: '2',
             name: 'SafeCare Medical Center',
             location: { lat: lat + 0.02, lng: lng - 0.01 },
             address: '456 Health Avenue',
-            phone: '+91 98765 43211',
-            vaccineAvailable: true
+            phone: '+91 98765 43211'
         },
         {
             id: '3',
             name: 'Metro Health Clinic',
             location: { lat: lat - 0.015, lng: lng + 0.02 },
             address: '789 Care Road',
-            phone: '+91 98765 43212',
-            vaccineAvailable: false
+            phone: '+91 98765 43212'
         }
     ];
 

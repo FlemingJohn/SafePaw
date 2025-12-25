@@ -69,15 +69,24 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    // Auto-detect location
+    // Auto-detect location with reverse geocoding
     const detectLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    setLocation(`${lat}, ${lng}`);
                     setCoordinates({ lat, lng });
+
+                    // Reverse geocode to get address
+                    try {
+                        const address = await reverseGeocode(lat, lng);
+                        setLocation(address);
+                    } catch (error) {
+                        console.error('Reverse geocoding failed:', error);
+                        // Fallback to coordinates if geocoding fails
+                        setLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+                    }
 
                     // Trigger smart validations
                     await performSmartValidations(lat, lng);
@@ -87,6 +96,59 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                     setLocation('Location detection failed');
                 }
             );
+        }
+    };
+
+    // Reverse geocode coordinates to address
+    const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+        try {
+            // Using OpenStreetMap Nominatim API (free, no API key required)
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                {
+                    headers: {
+                        'Accept-Language': 'en-US,en;q=0.9',
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Geocoding API request failed');
+            }
+
+            const data = await response.json();
+
+            // Build a readable address from the response
+            const address = data.address;
+            const parts = [];
+
+            // Add road/street
+            if (address.road) parts.push(address.road);
+
+            // Add neighborhood or suburb
+            if (address.neighbourhood) parts.push(address.neighbourhood);
+            else if (address.suburb) parts.push(address.suburb);
+
+            // Add city
+            if (address.city) parts.push(address.city);
+            else if (address.town) parts.push(address.town);
+            else if (address.village) parts.push(address.village);
+
+            // Add state
+            if (address.state) parts.push(address.state);
+
+            // Add postal code
+            if (address.postcode) parts.push(address.postcode);
+
+            const formattedAddress = parts.length > 0
+                ? parts.join(', ')
+                : data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+            return formattedAddress;
+        } catch (error) {
+            console.error('Reverse geocoding error:', error);
+            // Return coordinates as fallback
+            return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     };
 
@@ -131,6 +193,11 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
             return;
         }
 
+        if (!coordinates) {
+            alert('Please detect your location first');
+            return;
+        }
+
         setLoading(true);
         setSuccess(false);
 
@@ -144,9 +211,6 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                 return;
             }
 
-            // Parse location
-            const [lat, lng] = location.split(',').map(s => parseFloat(s.trim()));
-
             // Create incident date/time
             const incidentDateTime = Timestamp.fromDate(new Date(`${incidentDate}T${incidentTime}`));
 
@@ -155,9 +219,9 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                 userName: user.displayName || 'Anonymous',
                 userPhone: user.phoneNumber || undefined,
                 location: {
-                    address: location,
-                    lat: lat || 0,
-                    lng: lng || 0,
+                    address: location, // This is now the human-readable address
+                    lat: coordinates.lat,
+                    lng: coordinates.lng,
                 },
                 dogType,
                 severity,
@@ -225,8 +289,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                     <button
                         onClick={() => setReportMode('quick')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${reportMode === 'quick'
-                                ? 'bg-white text-[#8B4513] shadow-sm'
-                                : 'text-gray-600'
+                            ? 'bg-white text-[#8B4513] shadow-sm'
+                            : 'text-gray-600'
                             }`}
                     >
                         Quick Report
@@ -234,8 +298,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                     <button
                         onClick={() => setReportMode('detailed')}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${reportMode === 'detailed'
-                                ? 'bg-white text-[#8B4513] shadow-sm'
-                                : 'text-gray-600'
+                            ? 'bg-white text-[#8B4513] shadow-sm'
+                            : 'text-gray-600'
                             }`}
                     >
                         Detailed Report
@@ -316,8 +380,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                         <button
                             onClick={() => setSeverity('Minor')}
                             className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Minor'
-                                    ? 'border-[#8AB17D] bg-[#8AB17D]/10 text-[#8AB17D]'
-                                    : 'border-gray-200 text-gray-600 hover:border-[#8AB17D] hover:text-[#8AB17D]'
+                                ? 'border-[#8AB17D] bg-[#8AB17D]/10 text-[#8AB17D]'
+                                : 'border-gray-200 text-gray-600 hover:border-[#8AB17D] hover:text-[#8AB17D]'
                                 }`}
                         >
                             <CheckCircle2 size={32} className="mx-auto mb-1" />
@@ -326,8 +390,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                         <button
                             onClick={() => setSeverity('Moderate')}
                             className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Moderate'
-                                    ? 'border-[#E9C46A] bg-[#E9C46A]/10 text-[#BC6C25]'
-                                    : 'border-gray-200 text-gray-600'
+                                ? 'border-[#E9C46A] bg-[#E9C46A]/10 text-[#BC6C25]'
+                                : 'border-gray-200 text-gray-600'
                                 }`}
                         >
                             <AlertTriangle size={32} className="mx-auto mb-1" />
@@ -336,8 +400,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                         <button
                             onClick={() => setSeverity('Severe')}
                             className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Severe'
-                                    ? 'border-red-400 bg-red-50 text-red-600'
-                                    : 'border-gray-200 text-gray-600 hover:border-red-400 hover:text-red-600'
+                                ? 'border-red-400 bg-red-50 text-red-600'
+                                : 'border-gray-200 text-gray-600 hover:border-red-400 hover:text-red-600'
                                 }`}
                         >
                             <AlertCircle size={32} className="mx-auto mb-1" />
@@ -405,8 +469,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                                             key={age}
                                             onClick={() => setVictimAge(age)}
                                             className={`border-2 py-3 rounded-xl font-semibold text-sm transition-colors ${victimAge === age
-                                                    ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
-                                                    : 'border-gray-200 text-gray-600'
+                                                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                                                : 'border-gray-200 text-gray-600'
                                                 }`}
                                         >
                                             {age}
@@ -469,18 +533,27 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
 
                             {/* Provocation */}
                             <div>
-                                <label className="block text-sm font-semibold text-[#2D2424] mb-3">Was the dog provoked?</label>
+                                <label className="block text-sm font-semibold text-[#2D2424] mb-2">
+                                    Did anything trigger the dog to bite?
+                                </label>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Examples of provocation: teasing, hitting, stepping on tail, disturbing while eating
+                                </p>
                                 <div className="grid grid-cols-3 gap-3">
-                                    {(['Provoked', 'Unprovoked', 'Unknown'] as const).map((prov) => (
+                                    {([
+                                        { value: 'Provoked', label: 'Yes, Provoked' },
+                                        { value: 'Unprovoked', label: 'No, Unprovoked' },
+                                        { value: 'Unknown', label: 'Not Sure' }
+                                    ] as const).map((option) => (
                                         <button
-                                            key={prov}
-                                            onClick={() => setProvocation(prov)}
-                                            className={`border-2 py-3 rounded-xl font-semibold text-sm transition-colors ${provocation === prov
-                                                    ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
-                                                    : 'border-gray-200 text-gray-600'
+                                            key={option.value}
+                                            onClick={() => setProvocation(option.value)}
+                                            className={`border-2 py-3 rounded-xl font-semibold text-sm transition-colors ${provocation === option.value
+                                                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                                                : 'border-gray-200 text-gray-600'
                                                 }`}
                                         >
-                                            {prov}
+                                            {option.label}
                                         </button>
                                     ))}
                                 </div>
@@ -550,8 +623,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                         <button
                             onClick={() => setDogType('Stray')}
                             className={`border-2 font-semibold py-3 rounded-xl transition-colors ${dogType === 'Stray'
-                                    ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
-                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                 }`}
                         >
                             Stray Dog
@@ -559,8 +632,8 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                         <button
                             onClick={() => setDogType('Pet')}
                             className={`border-2 font-semibold py-3 rounded-xl transition-colors ${dogType === 'Pet'
-                                    ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
-                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                 }`}
                         >
                             Pet Dog
@@ -599,19 +672,12 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                                             <p className="font-semibold text-sm text-[#2D2424]">{hospital.name}</p>
                                             <p className="text-xs text-gray-600">{hospital.distance?.toFixed(1)} km away</p>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {hospital.vaccineAvailable && (
-                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                                    Vaccine Available
-                                                </span>
-                                            )}
-                                            <a
-                                                href={`tel:${hospital.phone}`}
-                                                className="bg-[#8B4513] text-white p-2 rounded-lg hover:bg-[#6D3610] transition-colors"
-                                            >
-                                                <Phone size={16} />
-                                            </a>
-                                        </div>
+                                        <a
+                                            href={`tel:${hospital.phone}`}
+                                            className="bg-[#8B4513] text-white p-2 rounded-lg hover:bg-[#6D3610] transition-colors"
+                                        >
+                                            <Phone size={16} />
+                                        </a>
                                     </div>
                                 ))}
                             </div>
@@ -622,7 +688,7 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                 {/* Submit Button */}
                 <button
                     onClick={handleSubmit}
-                    disabled={loading || !location || !severity}
+                    disabled={loading || !coordinates || !severity}
                     className="w-full bg-[#8B4513] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-orange-900/20 hover:bg-[#6D3610] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Submitting...' : 'Submit Report'}

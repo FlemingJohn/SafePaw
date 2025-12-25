@@ -1,6 +1,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Navigation, ZoomIn, ZoomOut } from 'lucide-react';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 // Google Maps type declarations
 declare global {
@@ -46,20 +48,8 @@ interface MapComponentProps {
     onMarkerClick?: (incident: IncidentMarker) => void;
 }
 
-// Mock incident data for demonstration
-const MOCK_INCIDENTS: IncidentMarker[] = [
-    { id: '1', lat: 12.9716, lng: 77.5946, severity: 'Moderate', location: 'MG Road', date: 'Dec 23' },
-    { id: '2', lat: 12.9352, lng: 77.6245, severity: 'Severe', location: 'Koramangala', date: 'Dec 22' },
-    { id: '3', lat: 12.9698, lng: 77.7500, severity: 'Minor', location: 'Whitefield', date: 'Dec 21' },
-    { id: '4', lat: 12.9279, lng: 77.6271, severity: 'Moderate', location: 'HSR Layout', date: 'Dec 20' },
-    { id: '5', lat: 13.0358, lng: 77.5970, severity: 'Minor', location: 'Hebbal', date: 'Dec 19' },
-    { id: '6', lat: 12.9141, lng: 77.6411, severity: 'Severe', location: 'BTM Layout', date: 'Dec 18' },
-    { id: '7', lat: 12.9716, lng: 77.6412, severity: 'Moderate', location: 'Indiranagar', date: 'Dec 17' },
-    { id: '8', lat: 12.9833, lng: 77.5833, severity: 'Minor', location: 'Malleshwaram', date: 'Dec 16' },
-];
-
 const MapComponent: React.FC<MapComponentProps> = ({
-    incidents = MOCK_INCIDENTS,
+    incidents: propIncidents,
     center = { lat: 12.9716, lng: 77.5946 }, // Bangalore
     zoom = 12,
     onMarkerClick
@@ -69,6 +59,42 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [incidents, setIncidents] = useState<IncidentMarker[]>([]);
+
+    // Fetch incidents from Firestore
+    useEffect(() => {
+        const fetchIncidents = async () => {
+            try {
+                const incidentsRef = collection(db, 'incidents');
+                const q = query(incidentsRef, orderBy('createdAt', 'desc'), limit(50));
+                const querySnapshot = await getDocs(q);
+
+                const fetchedIncidents: IncidentMarker[] = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.location?.coordinates) {
+                        fetchedIncidents.push({
+                            id: doc.id,
+                            lat: data.location.coordinates.latitude || data.location.coordinates._lat,
+                            lng: data.location.coordinates.longitude || data.location.coordinates._long,
+                            severity: data.severity || 'Minor',
+                            location: data.location.address || 'Unknown Location',
+                            date: data.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown Date'
+                        });
+                    }
+                });
+
+                setIncidents(fetchedIncidents);
+                console.log(`Loaded ${fetchedIncidents.length} incidents from Firestore`);
+            } catch (err) {
+                console.error('Error fetching incidents:', err);
+                // Use prop incidents or empty array as fallback
+                setIncidents(propIncidents || []);
+            }
+        };
+
+        fetchIncidents();
+    }, [propIncidents]);
 
     // Initialize Google Maps
     useEffect(() => {
@@ -158,7 +184,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     // Add markers to map
     useEffect(() => {
-        if (!map) return;
+        if (!map || incidents.length === 0) return;
 
         // Clear existing markers
         markers.forEach(marker => marker.setMap(null));
