@@ -169,22 +169,30 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     clearInterval(checkGoogle);
                     initMap();
                 }
-            }, 100);
+            }, 50); // Check every 50ms instead of 100ms for faster response
 
-            // Timeout after 10 seconds
+            // Timeout after 5 seconds instead of 10
             setTimeout(() => {
                 clearInterval(checkGoogle);
                 if (!window.google) {
                     setError('Google Maps loading timeout');
                     setIsLoading(false);
                 }
-            }, 10000);
+            }, 5000);
         }
     }, []);
 
     // Add markers to map
     useEffect(() => {
-        if (!map || incidents.length === 0) return;
+        if (!map) return;
+
+        // Early return if no incidents - don't process markers
+        if (incidents.length === 0) {
+            // Clear any existing markers
+            markers.forEach(marker => marker.setMap(null));
+            setMarkers([]);
+            return;
+        }
 
         // Clear existing markers
         markers.forEach(marker => marker.setMap(null));

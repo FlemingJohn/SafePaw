@@ -735,9 +735,26 @@ const LegalPage: React.FC = () => {
 
   const calculateCompensation = () => {
     const expense = parseInt(medicalExpense) || 0;
-    const baseCompensation = severity === 'Severe' ? 100000 : severity === 'Moderate' ? 50000 : 25000;
-    return baseCompensation + expense;
+
+    // Base compensation based on severity (realistic Indian court amounts)
+    const baseCompensation = severity === 'Severe' ? 200000 :
+      severity === 'Moderate' ? 75000 : 30000;
+
+    // Pain & suffering (typically 50% of base)
+    const painSuffering = Math.floor(baseCompensation * 0.5);
+
+    // Total = Medical expenses + Base compensation + Pain & suffering
+    const total = expense + baseCompensation + painSuffering;
+
+    return {
+      medical: expense,
+      base: baseCompensation,
+      painSuffering,
+      total
+    };
   };
+
+  const compensation = calculateCompensation();
 
   return (
     <div>
@@ -752,7 +769,7 @@ const LegalPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-[#2D2424]">Compensation Calculator</h2>
-            <p className="text-sm text-[#2D2424]/60">Estimate your eligible compensation</p>
+            <p className="text-sm text-[#2D2424]/60">Estimate your eligible compensation under Indian law</p>
           </div>
         </div>
 
@@ -794,39 +811,190 @@ const LegalPage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl p-6">
-          <p className="text-sm text-[#2D2424]/60 mb-2">Estimated Compensation</p>
-          <p className="text-4xl font-bold text-[#8B4513] mb-4">₹{calculateCompensation().toLocaleString('en-IN')}</p>
-          <p className="text-xs text-[#2D2424]/60">
-            * This is an estimate. Actual compensation depends on case specifics and court judgment.
-          </p>
+          <p className="text-sm text-[#2D2424]/60 mb-4">Estimated Compensation Breakdown</p>
+
+          <div className="space-y-3 mb-4">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <span className="text-sm text-[#2D2424]/70">Medical Expenses</span>
+              <span className="font-semibold text-[#2D2424]">₹{compensation.medical.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <span className="text-sm text-[#2D2424]/70">Base Compensation ({severity})</span>
+              <span className="font-semibold text-[#2D2424]">₹{compensation.base.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <span className="text-sm text-[#2D2424]/70">Pain & Suffering</span>
+              <span className="font-semibold text-[#2D2424]">₹{compensation.painSuffering.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-3 border-t-2 border-[#8B4513]/20">
+            <span className="text-lg font-bold text-[#2D2424]">Total Estimated</span>
+            <span className="text-3xl font-bold text-[#8B4513]">₹{compensation.total.toLocaleString('en-IN')}</span>
+          </div>
+
+          <div className="mt-4 bg-amber-50 rounded-lg p-3">
+            <p className="text-xs text-amber-900">
+              <strong>⚠️ Disclaimer:</strong> This is an estimate based on typical Indian court awards. Actual compensation depends on:
+            </p>
+            <ul className="text-xs text-amber-800 mt-2 ml-4 space-y-1">
+              <li>• Severity of injury and permanent disability</li>
+              <li>• Loss of income and earning capacity</li>
+              <li>• Court jurisdiction and precedents</li>
+              <li>• Evidence and documentation quality</li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* Your Rights */}
+      {/* Legal Framework */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-6 md:p-8 mb-8 border-2 border-blue-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-blue-600 p-3 rounded-xl">
+            <BookOpen size={24} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#2D2424]">Legal Framework</h2>
+            <p className="text-sm text-[#2D2424]/60">Understanding Indian Law on Dog Bites</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 mb-4">
+          <h3 className="font-bold text-lg text-[#2D2424] mb-3">Section 289 IPC / Section 291 BNS</h3>
+          <p className="text-sm text-[#2D2424]/80 mb-4">
+            Addresses negligent conduct of pet owners if their animal causes or is likely to cause danger to human life or grievous hurt.
+          </p>
+          <div className="bg-blue-50 rounded-xl p-4 mb-4">
+            <p className="text-xs font-semibold text-blue-900 mb-2">⚖️ Important Note:</p>
+            <p className="text-xs text-blue-800">
+              As of July 1, 2024, the IPC has been replaced by the Bharatiya Nyaya Sanhita (BNS).
+              IPC Section 289 is now covered by BNS Section 291.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Offense</p>
+              <p className="text-sm text-gray-900">Knowingly or negligently omitting to take sufficient order with an animal</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Punishment</p>
+              <p className="text-sm text-gray-900">Up to 6 months imprisonment or fine up to ₹5,000 (BNS 291), or both</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Nature</p>
+              <p className="text-sm text-gray-900">Cognizable and Bailable</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Previous Law</p>
+              <p className="text-sm text-gray-900">IPC 289: Fine up to ₹1,000</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Legal Actions for Victims */}
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
-        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Your Rights as a Victim</h2>
+        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Legal Actions for Victims</h2>
         <div className="space-y-4">
-          <RightCard
-            icon={<FileCheck size={20} />}
-            title="Right to Compensation"
-            description="You can claim compensation from pet owners (IPC 289) or Municipal Corporation for stray dog bites."
-          />
-          <RightCard
-            icon={<Shield size={20} />}
-            title="Free Medical Treatment"
-            description="Government hospitals must provide FREE anti-rabies vaccine and immunoglobulin under National Rabies Control Programme."
-          />
-          <RightCard
-            icon={<BookOpen size={20} />}
-            title="Legal Recourse"
-            description="File FIR under IPC 289, 337, 338. Sue for negligence. Municipal corporations are liable for ABC program failures."
-          />
+          <div className="flex gap-4 p-4 bg-green-50 rounded-xl border-l-4 border-green-500">
+            <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
+            <div>
+              <h3 className="font-bold text-[#2D2424] mb-1">Seek Immediate Medical Attention</h3>
+              <p className="text-sm text-[#2D2424]/70">Most crucial step, especially for anti-rabies vaccinations</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">2</div>
+            <div>
+              <h3 className="font-bold text-[#2D2424] mb-1">File an FIR (First Information Report)</h3>
+              <p className="text-sm text-[#2D2424]/70 mb-2">Lodge a police complaint under BNS Section 291 (formerly IPC 289) at the local police station</p>
+              <p className="text-xs text-[#2D2424]/60 bg-white rounded-lg p-2">
+                💡 For grievous hurt: Additional charges under IPC Section 338 (Causing grievous hurt by act endangering life)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 p-4 bg-orange-50 rounded-xl border-l-4 border-orange-500">
+            <div className="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">3</div>
+            <div>
+              <h3 className="font-bold text-[#2D2424] mb-1">Seek Compensation</h3>
+              <p className="text-sm text-[#2D2424]/70 mb-2">File a civil suit for damages covering medical expenses, emotional trauma, and financial burden</p>
+              <p className="text-xs text-[#2D2424]/60 bg-white rounded-lg p-2">
+                ⚖️ Courts can order compensation from fine amount under Section 357 of CrPC
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 p-4 bg-purple-50 rounded-xl border-l-4 border-purple-500">
+            <div className="flex-shrink-0 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">4</div>
+            <div>
+              <h3 className="font-bold text-[#2D2424] mb-1">Report to Municipal Authorities</h3>
+              <p className="text-sm text-[#2D2424]/70">Keeping a pet without valid license or violating local municipal laws can lead to action by municipal corporation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Owner Responsibilities */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-6 md:p-8 mb-8 border-2 border-amber-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-amber-600 p-3 rounded-xl">
+            <Shield size={24} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-[#2D2424]">Owner Responsibilities</h2>
+            <p className="text-sm text-[#2D2424]/60">Legal duties to prevent incidents</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileCheck size={16} className="text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#2D2424] mb-1">Vaccination & ID</h3>
+              <p className="text-sm text-[#2D2424]/70">Ensure dog is vaccinated against rabies and wears identity tag</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Shield size={16} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#2D2424] mb-1">Leash & Supervision</h3>
+              <p className="text-sm text-[#2D2424]/70">Keep dog on leash and supervise in public places</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertTriangle size={16} className="text-orange-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#2D2424] mb-1">Muzzle for Aggressive Dogs</h3>
+              <p className="text-sm text-[#2D2424]/70">Use muzzle if pet shows aggressive behavior</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BookOpen size={16} className="text-purple-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#2D2424] mb-1">Municipal Compliance</h3>
+              <p className="text-sm text-[#2D2424]/70">Abide by local municipal laws and regulations</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Required Documents */}
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-8">
-        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Documents Needed</h2>
+        <h2 className="text-2xl font-bold text-[#2D2424] mb-6">Documents Needed for Legal Action</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DocumentItem text="Medical reports and bills" />
           <DocumentItem text="FIR copy from police station" />
