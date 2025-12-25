@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SafetyPage from './SafetyPage';
 import EnhancedReportPage from './EnhancedReportPage';
 import {
@@ -607,19 +607,16 @@ const EmergencyPage: React.FC = () => {
         <HospitalCard
           name="City General Hospital"
           distance="1.2 km"
-          vaccineAvailable={true}
           phone="+91 98765 43210"
         />
         <HospitalCard
           name="SafeCare Medical Center"
           distance="2.5 km"
-          vaccineAvailable={true}
           phone="+91 98765 43211"
         />
         <HospitalCard
           name="Metro Health Clinic"
           distance="3.8 km"
-          vaccineAvailable={false}
           phone="+91 98765 43212"
         />
       </div>
@@ -629,34 +626,104 @@ const EmergencyPage: React.FC = () => {
 
 // MY REPORTS PAGE
 const MyReportsPage: React.FC = () => {
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserReports = async () => {
+      try {
+        const { auth } = await import('../lib/firebase');
+        const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+
+        const user = auth.currentUser;
+        if (!user) {
+          setError('Please sign in to view your reports');
+          setLoading(false);
+          return;
+        }
+
+        // Query incidents created by this user
+        const incidentsRef = collection(db, 'incidents');
+        const q = query(
+          incidentsRef,
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
+
+        const querySnapshot = await getDocs(q);
+        const userReports = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.() || new Date()
+        }));
+
+        setReports(userReports);
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching reports:', err);
+        setError(err.message || 'Failed to load reports');
+        setLoading(false);
+      }
+    };
+
+    fetchUserReports();
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">My Reports</h1>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#8B4513] border-t-transparent"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">My Reports</h1>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">My Reports</h1>
       <p className="text-[#2D2424]/60 mb-8">Track the status of your incident reports.</p>
 
-      <div className="space-y-4">
-        <ReportCard
-          id="#1234"
-          date="Dec 23, 2024"
-          location="MG Road, Bangalore"
-          status="Under Review"
-          severity="Moderate"
-        />
-        <ReportCard
-          id="#1122"
-          date="Dec 20, 2024"
-          location="Koramangala 5th Block"
-          status="Action Taken"
-          severity="Minor"
-        />
-        <ReportCard
-          id="#1089"
-          date="Dec 18, 2024"
-          location="Indiranagar"
-          status="Resolved"
-          severity="Moderate"
-        />
-      </div>
+      {reports.length === 0 ? (
+        <div className="bg-gray-50 rounded-2xl p-12 text-center">
+          <FileText size={48} className="text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-[#2D2424] mb-2">No Reports Yet</h3>
+          <p className="text-[#2D2424]/60 mb-4">You haven't submitted any incident reports.</p>
+          <button
+            onClick={() => window.location.hash = '#report'}
+            className="bg-[#8B4513] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors"
+          >
+            Report an Incident
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reports.map((report) => (
+            <ReportCard
+              key={report.id}
+              id={`#${report.id.substring(0, 6)}`}
+              date={report.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              location={report.location?.address || 'Unknown Location'}
+              status={report.status || 'Reported'}
+              severity={report.severity || 'Minor'}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -861,8 +928,8 @@ const QuickActionCard: React.FC<{ icon: React.ReactNode; title: string; descript
   </motion.div>
 );
 
-const HospitalCard: React.FC<{ name: string; distance: string; vaccineAvailable: boolean; phone: string }> = ({
-  name, distance, vaccineAvailable, phone
+const HospitalCard: React.FC<{ name: string; distance: string; phone: string }> = ({
+  name, distance, phone
 }) => (
   <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
     <div className="flex justify-between items-start mb-4">
@@ -870,15 +937,15 @@ const HospitalCard: React.FC<{ name: string; distance: string; vaccineAvailable:
         <h3 className="font-bold text-lg text-[#2D2424] mb-1">{name}</h3>
         <p className="text-sm text-[#2D2424]/60">{distance} away</p>
       </div>
-      <span className={`text-xs font-bold px-3 py-1 rounded-full ${vaccineAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-        {vaccineAvailable ? '✓ Vaccine Available' : '✗ No Vaccine'}
-      </span>
     </div>
     <div className="flex gap-3">
-      <button className="flex-1 bg-[#8B4513] text-white py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center justify-center gap-2">
+      <a
+        href={`tel:${phone}`}
+        className="flex-1 bg-[#8B4513] text-white py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors flex items-center justify-center gap-2"
+      >
         <Phone size={18} />
         Call Now
-      </button>
+      </a>
       <button className="flex-1 border-2 border-[#8B4513] text-[#8B4513] py-3 rounded-xl font-semibold hover:bg-[#8B4513]/10 transition-colors flex items-center justify-center gap-2">
         <Navigation size={18} />
         Navigate

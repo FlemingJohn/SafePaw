@@ -110,10 +110,10 @@ const SafetyPage: React.FC = () => {
                                 </div>
                             </div>
                             <a
-                                href="tel:1962"
+                                href="tel:108"
                                 className="block bg-white text-red-600 text-center py-4 rounded-xl font-bold text-xl hover:bg-red-50 transition-colors"
                             >
-                                📞 Call 1962 (Animal Control)
+                                📞 Call 108 (Emergency Services)
                             </a>
                         </div>
 
@@ -125,7 +125,7 @@ const SafetyPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <h2 className="text-2xl font-bold text-[#2D2424]">Nearest Hospitals</h2>
-                                    <p className="text-sm text-[#2D2424]/60">With rabies vaccine available</p>
+                                    <p className="text-sm text-[#2D2424]/60">Within 5km radius</p>
                                 </div>
                             </div>
 
@@ -135,21 +135,18 @@ const SafetyPage: React.FC = () => {
                                     distance="1.2 km"
                                     address="Bannerghatta Road, Bangalore"
                                     phone="+91 80 2692 2222"
-                                    hasVaccine={true}
                                 />
                                 <HospitalCard
                                     name="Manipal Hospital"
                                     distance="2.5 km"
                                     address="HAL Airport Road, Bangalore"
                                     phone="+91 80 2502 4444"
-                                    hasVaccine={true}
                                 />
                                 <HospitalCard
                                     name="Fortis Hospital"
                                     distance="3.8 km"
                                     address="Cunningham Road, Bangalore"
                                     phone="+91 80 6621 4444"
-                                    hasVaccine={false}
                                 />
                             </div>
                         </div>
@@ -193,19 +190,18 @@ interface HospitalCardProps {
     distance: string;
     address: string;
     phone: string;
-    hasVaccine: boolean;
 }
 
-const HospitalCard: React.FC<HospitalCardProps> = ({ name, distance, address, phone, hasVaccine }) => (
+const HospitalCard: React.FC<HospitalCardProps> = ({ name, distance, address, phone }) => (
     <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-100 hover:border-[#8B4513]/30 transition-colors">
         <div className="flex justify-between items-start mb-2">
-            <div>
-                <h3 className="font-bold text-[#2D2424]">{name}</h3>
+            <div className="flex-1">
+                <h3 className="font-bold text-[#2D2424] mb-1">{name}</h3>
                 <p className="text-sm text-[#2D2424]/60">{address}</p>
             </div>
-            <span className="text-sm font-semibold text-[#8B4513]">{distance}</span>
+            <span className="text-sm font-semibold text-[#8B4513] ml-4">{distance}</span>
         </div>
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center mt-3">
             <a
                 href={`tel:${phone}`}
                 className="flex items-center gap-2 text-sm text-[#8B4513] font-semibold hover:underline"
@@ -213,11 +209,6 @@ const HospitalCard: React.FC<HospitalCardProps> = ({ name, distance, address, ph
                 <Phone size={16} />
                 {phone}
             </a>
-            {hasVaccine && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">
-                    ✓ Vaccine Available
-                </span>
-            )}
         </div>
     </div>
 );
