@@ -39,8 +39,9 @@ service cloud.firestore {
     
     // Incidents Collection
     match /incidents/{incidentId} {
-      // Anyone authenticated can read incidents (for map/heatmap)
-      allow read: if isAuthenticated();
+      // PUBLIC READ: Allow anyone to read incidents for map/heatmap display
+      // This is necessary for the live risk heatmap to work
+      allow read: if true;
       
       // Any authenticated user can create an incident report
       allow create: if isAuthenticated() && 
