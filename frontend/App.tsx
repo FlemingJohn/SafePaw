@@ -13,10 +13,19 @@ import { onAuthChange, getUserProfile, UserRole } from './services/authService';
 type View = 'landing' | 'auth' | 'citizen' | 'government';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<View>('landing');
+  // Initialize view from localStorage if available
+  const [view, setView] = useState<View>(() => {
+    const savedView = localStorage.getItem('safepaw_current_view');
+    return (savedView as View) || 'landing';
+  });
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Save view to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('safepaw_current_view', view);
+  }, [view]);
 
   // Check authentication state on mount
   useEffect(() => {
@@ -27,11 +36,13 @@ const App: React.FC = () => {
         if (profile) {
           setUserRole(profile.role);
           setIsAuthenticated(true);
-          // Redirect to appropriate dashboard
-          if (profile.role === 'citizen') {
-            setView('citizen');
-          } else if (profile.role === 'government') {
-            setView('government');
+          // Only redirect if not already on a dashboard
+          if (view === 'landing' || view === 'auth') {
+            if (profile.role === 'citizen') {
+              setView('citizen');
+            } else if (profile.role === 'government') {
+              setView('government');
+            }
           }
         }
       } else {
@@ -39,6 +50,7 @@ const App: React.FC = () => {
         setIsAuthenticated(false);
         setUserRole(null);
         setView('landing');
+        localStorage.removeItem('safepaw_current_view');
       }
       setLoading(false);
     });
@@ -50,11 +62,17 @@ const App: React.FC = () => {
   const handleAuthSuccess = (role: UserRole) => {
     setUserRole(role);
     setIsAuthenticated(true);
-    if (role === 'citizen') {
-      setView('citizen');
-    } else if (role === 'government') {
-      setView('government');
+
+    // Don't force redirect - stay on current page
+    // Only redirect if on landing or auth page
+    if (view === 'landing' || view === 'auth') {
+      if (role === 'citizen') {
+        setView('citizen');
+      } else if (role === 'government') {
+        setView('government');
+      }
     }
+    // If already on a dashboard page, stay there
   };
 
   // Handle logout
