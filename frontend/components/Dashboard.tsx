@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
 import SafetyPage from './SafetyPage';
+import EnhancedReportPage from './EnhancedReportPage';
 import {
   Home,
   MapPin,
@@ -22,7 +22,8 @@ import {
   Phone,
   Navigation,
   Camera,
-  Map
+  Map,
+  AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import MapComponent from './MapComponent';
@@ -134,7 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           className="flex-1 px-4 py-6 md:px-12 md:py-12"
         >
           {currentPage === 'home' && <HomePage onNavigate={setCurrentPage} />}
-          {currentPage === 'report' && <ReportPage />}
+          {currentPage === 'report' && <EnhancedReportPage />}
           {currentPage === 'safety' && <SafetyPage />}
           {currentPage === 'myreports' && <MyReportsPage />}
           {currentPage === 'legal' && <LegalPage />}
@@ -292,10 +293,108 @@ const HomePage: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate 
 
 // REPORT PAGE
 const ReportPage: React.FC = () => {
+  const [location, setLocation] = useState('');
+  const [dogType, setDogType] = useState<'Stray' | 'Pet'>('Stray');
+  const [severity, setSeverity] = useState<'Minor' | 'Moderate' | 'Severe' | undefined>(undefined);
+  const [description, setDescription] = useState('');
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  // Auto-detect location
+  const detectLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation(`${position.coords.latitude}, ${position.coords.longitude}`);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocation('Location detection failed');
+        }
+      );
+    }
+  };
+
+  // Handle photo upload
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setPhotos(Array.from(e.target.files));
+    }
+  };
+
+  // Submit incident
+  const handleSubmit = async () => {
+    setLoading(true);
+    setSuccess(false);
+
+    try {
+      const { submitIncident } = await import('../services/incidentService');
+      const { auth } = await import('../lib/firebase');
+      const { GeoPoint } = await import('firebase/firestore');
+
+      const user = auth.currentUser;
+      if (!user) {
+        alert('Please sign in to submit a report');
+        return;
+      }
+
+      // Parse location (simplified - in production, use geocoding)
+      const [lat, lng] = location.split(',').map(s => parseFloat(s.trim()));
+
+      // Upload photos to storage (simplified - implement actual upload)
+      const photoUrls: string[] = [];
+      // TODO: Implement photo upload to Firebase Storage
+
+      const incidentId = await submitIncident({
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhone: user.phoneNumber || undefined,
+        location: {
+          address: location,
+          lat: lat || 0,
+          lng: lng || 0,
+        },
+        dogType,
+        severity,
+        description,
+        photos: photos,
+        anonymous: false,
+      });
+
+      console.log('Incident submitted:', incidentId);
+      setSuccess(true);
+
+      // Reset form
+      setTimeout(() => {
+        setLocation('');
+        setDescription('');
+        setPhotos([]);
+        setSuccess(false);
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('Error submitting incident:', error);
+      alert(`Failed to submit: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl md:text-4xl font-bold text-[#2D2424] mb-4">Report Incident</h1>
       <p className="text-[#2D2424]/60 mb-8">Help us track and prevent dog bite incidents in your area.</p>
+
+      {success && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-xl mb-6"
+        >
+          ✅ Incident reported successfully! AI agents are analyzing your report.
+        </motion.div>
+      )}
 
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 space-y-6">
         {/* Location */}
@@ -304,10 +403,15 @@ const ReportPage: React.FC = () => {
           <div className="flex gap-3">
             <input
               type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               placeholder="Auto-detected: Current Location"
               className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#8B4513]/20"
             />
-            <button className="bg-[#8B4513] text-white px-4 rounded-xl hover:bg-[#6D3610] transition-colors">
+            <button
+              onClick={detectLocation}
+              className="bg-[#8B4513] text-white px-4 rounded-xl hover:bg-[#6D3610] transition-colors"
+            >
               <Navigation size={20} />
             </button>
           </div>
@@ -317,10 +421,22 @@ const ReportPage: React.FC = () => {
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-3">Dog Type</label>
           <div className="grid grid-cols-2 gap-3">
-            <button className="border-2 border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513] font-semibold py-3 rounded-xl hover:bg-[#8B4513]/20 transition-colors">
+            <button
+              onClick={() => setDogType('Stray')}
+              className={`border-2 font-semibold py-3 rounded-xl transition-colors ${dogType === 'Stray'
+                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+            >
               Stray Dog
             </button>
-            <button className="border-2 border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:border-gray-300 transition-colors">
+            <button
+              onClick={() => setDogType('Pet')}
+              className={`border-2 font-semibold py-3 rounded-xl transition-colors ${dogType === 'Pet'
+                ? 'border-[#8B4513] bg-[#8B4513]/10 text-[#8B4513]'
+                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+            >
               Pet Dog
             </button>
           </div>
@@ -330,16 +446,34 @@ const ReportPage: React.FC = () => {
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-3">Severity Level</label>
           <div className="grid grid-cols-3 gap-3">
-            <button className="border-2 border-gray-200 text-gray-600 py-3 rounded-xl hover:border-[#8AB17D] hover:text-[#8AB17D] transition-colors">
-              <div className="text-2xl mb-1">😊</div>
+            <button
+              onClick={() => setSeverity('Minor')}
+              className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Minor'
+                ? 'border-[#8AB17D] bg-[#8AB17D]/10 text-[#8AB17D]'
+                : 'border-gray-200 text-gray-600 hover:border-[#8AB17D] hover:text-[#8AB17D]'
+                }`}
+            >
+              <CheckCircle2 size={32} className="mx-auto mb-1" />
               <div className="text-xs font-semibold">Minor</div>
             </button>
-            <button className="border-2 border-[#E9C46A] bg-[#E9C46A]/10 text-[#BC6C25] py-3 rounded-xl">
-              <div className="text-2xl mb-1">😟</div>
+            <button
+              onClick={() => setSeverity('Moderate')}
+              className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Moderate'
+                ? 'border-[#E9C46A] bg-[#E9C46A]/10 text-[#BC6C25]'
+                : 'border-gray-200 text-gray-600'
+                }`}
+            >
+              <AlertTriangle size={32} className="mx-auto mb-1" />
               <div className="text-xs font-semibold">Moderate</div>
             </button>
-            <button className="border-2 border-gray-200 text-gray-600 py-3 rounded-xl hover:border-red-400 hover:text-red-600 transition-colors">
-              <div className="text-2xl mb-1">😰</div>
+            <button
+              onClick={() => setSeverity('Severe')}
+              className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Severe'
+                ? 'border-red-400 bg-red-50 text-red-600'
+                : 'border-gray-200 text-gray-600 hover:border-red-400 hover:text-red-600'
+                }`}
+            >
+              <AlertCircle size={32} className="mx-auto mb-1" />
               <div className="text-xs font-semibold">Severe</div>
             </button>
           </div>
@@ -348,10 +482,19 @@ const ReportPage: React.FC = () => {
         {/* Photo Upload */}
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-3">Add Photo (Optional)</label>
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#8B4513] transition-colors cursor-pointer">
+          <label className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#8B4513] transition-colors cursor-pointer block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
             <Camera size={32} className="mx-auto text-gray-400 mb-2" />
-            <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-          </div>
+            <p className="text-sm text-gray-600">
+              {photos.length > 0 ? `${photos.length} photo(s) selected` : 'Click to upload or drag and drop'}
+            </p>
+          </label>
         </div>
 
         {/* Description */}
@@ -359,14 +502,20 @@ const ReportPage: React.FC = () => {
           <label className="block text-sm font-semibold text-[#2D2424] mb-2">Description (Optional)</label>
           <textarea
             rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Provide any additional details..."
             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#8B4513]/20"
           />
         </div>
 
         {/* Submit Button */}
-        <button className="w-full bg-[#8B4513] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-orange-900/20 hover:bg-[#6D3610] transition-colors">
-          Submit Report
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !location}
+          className="w-full bg-[#8B4513] text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-orange-900/20 hover:bg-[#6D3610] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Submitting...' : 'Submit Report'}
         </button>
       </div>
     </div>
