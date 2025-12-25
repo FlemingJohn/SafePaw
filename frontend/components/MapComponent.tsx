@@ -25,7 +25,21 @@ declare namespace google.maps {
     }
     class InfoWindow {
         constructor(options: any);
-        open(map: Map, marker: Marker): void;
+        open(options: { map?: Map; anchor?: any; content?: string }): void;
+        close(): void;
+    }
+    namespace marker {
+        class AdvancedMarkerElement {
+            constructor(options: {
+                map?: Map;
+                position: { lat: number; lng: number };
+                title?: string;
+                content?: HTMLElement | null;
+            });
+            addListener(event: string, handler: () => void): void;
+            position: { lat: number; lng: number };
+            map: Map | null;
+        }
     }
     namespace SymbolPath {
         const CIRCLE: any;
@@ -56,13 +70,21 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const [map, setMap] = useState<google.maps.Map | null>(null);
-    const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+    const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+    const infoWindowsRef = useRef<google.maps.InfoWindow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [incidents, setIncidents] = useState<IncidentMarker[]>([]);
+    const mapInitializedRef = useRef(false);
 
-    // Fetch incidents from Firestore
+    // Fetch incidents from Firestore (only if propIncidents not provided)
     useEffect(() => {
+        // If incidents are provided as props, use them and skip fetching
+        if (propIncidents !== undefined) {
+            setIncidents(propIncidents || []);
+            return;
+        }
+
         const fetchIncidents = async () => {
             try {
                 const incidentsRef = collection(db, 'incidents');
@@ -88,8 +110,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 console.log(`Loaded ${fetchedIncidents.length} incidents from Firestore`);
             } catch (err) {
                 console.error('Error fetching incidents:', err);
-                // Use prop incidents or empty array as fallback
-                setIncidents(propIncidents || []);
+                setIncidents([]);
             }
         };
 
@@ -98,26 +119,30 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     // Initialize Google Maps
     useEffect(() => {
+        // Prevent multiple initializations
+        if (mapInitializedRef.current) return;
+        mapInitializedRef.current = true;
+
         console.log('🗺️ MapComponent: Initializing...');
 
+        const domCheckAttemptsRef = { count: 0 };
         const initMap = () => {
-            console.log('🗺️ MapComponent: initMap called');
-
             if (!mapRef.current) {
-                console.warn('⚠️ MapComponent: mapRef.current is null, retrying in 100ms...');
-                // Retry after a short delay to let the DOM render
-                setTimeout(() => {
-                    if (mapRef.current) {
-                        initMap();
-                    } else {
-                        console.error('❌ MapComponent: mapRef still null after retry');
-                    }
-                }, 100);
+                domCheckAttemptsRef.count++;
+                if (domCheckAttemptsRef.count > 50) {
+                    console.error('❌ MapComponent: mapRef.current not available after multiple attempts');
+                    setError('Failed to initialize map: DOM element not ready');
+                    setIsLoading(false);
+                    return;
+                }
+                // Use requestAnimationFrame for better timing - retry after DOM update
+                requestAnimationFrame(() => {
+                    initMap(); // Always call initMap again to check
+                });
                 return;
             }
 
             try {
-                // Check if Google Maps is loaded
                 if (typeof google === 'undefined' || !google.maps) {
                     console.error('❌ MapComponent: Google Maps not loaded');
                     setError('Google Maps not loaded. Please check API key.');
@@ -129,6 +154,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 const mapInstance = new google.maps.Map(mapRef.current, {
                     center,
                     zoom,
+                    mapId: 'SAFEPAW_MAP_ID', // Required for AdvancedMarkerElement
                     styles: [
                         {
                             featureType: 'poi',
@@ -142,7 +168,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 });
 
                 setMap(mapInstance);
-                setIsLoading(false);
+                setIsLoading(false); // Map is ready, stop loading
                 console.log('✅ MapComponent: Map instance created successfully');
             } catch (err) {
                 console.error('❌ MapComponent: Map initialization error:', err);
@@ -151,15 +177,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
             }
         };
 
-        // Check if script already exists
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-        console.log('🗺️ MapComponent: Existing script?', !!existingScript);
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
         // Load Google Maps script if not already loaded
         if (!window.google && !existingScript) {
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-            console.log('🗺️ MapComponent: API key exists?', !!apiKey);
-
             if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
                 console.error('❌ MapComponent: Google Maps API key not configured');
                 setError('Google Maps API key not configured');
@@ -169,7 +191,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
             console.log('🗺️ MapComponent: Loading Google Maps script...');
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker`;
             script.async = true;
             script.defer = true;
             script.onload = () => {
@@ -185,106 +207,187 @@ const MapComponent: React.FC<MapComponentProps> = ({
         } else if (window.google) {
             console.log('✅ MapComponent: Google Maps already loaded');
             initMap();
-        } else {
-            console.log('🗺️ MapComponent: Waiting for Google Maps to load...');
+        } else if (existingScript) {
+            // Script is loading, wait for it with a more efficient check
+            let attempts = 0;
+            const maxAttempts = 100; // 10 seconds max (100 * 100ms)
+
             const checkGoogle = setInterval(() => {
-                if (window.google) {
+                attempts++;
+                if (window.google && window.google.maps) {
                     clearInterval(checkGoogle);
                     console.log('✅ MapComponent: Google Maps now available');
                     initMap();
-                }
-            }, 100);
-
-            setTimeout(() => {
-                clearInterval(checkGoogle);
-                if (!window.google) {
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkGoogle);
                     console.error('❌ MapComponent: Google Maps loading timeout');
                     setError('Google Maps loading timeout');
                     setIsLoading(false);
                 }
-            }, 10000);
-        }
-    }, []);
+            }, 100);
 
-    // Add markers to map
+            // Cleanup on unmount
+            return () => {
+                clearInterval(checkGoogle);
+                mapInitializedRef.current = false;
+            };
+        }
+
+        // Cleanup on unmount (for other branches)
+        return () => {
+            mapInitializedRef.current = false;
+        };
+    }, []); // Empty dependency array - only run once on mount
+
+    // Add markers to map (optimized with AdvancedMarkerElement)
     useEffect(() => {
         if (!map) return;
 
-        // Clear existing markers
-        markers.forEach(marker => marker.setMap(null));
+        console.log(`🗺️ Adding markers for ${incidents.length} incidents`);
 
-        // If no incidents, just clear markers and return
+        // Check if AdvancedMarkerElement is available, otherwise fall back to Marker
+        const useAdvancedMarkers = typeof google !== 'undefined' && 
+                                   google.maps?.marker?.AdvancedMarkerElement;
+
+        console.log(`🗺️ Using ${useAdvancedMarkers ? 'AdvancedMarkerElement' : 'legacy Marker'} API`);
+
+        // Clear existing markers and info windows
+        markersRef.current.forEach(marker => {
+            if ('map' in marker) {
+                (marker as any).map = null;
+            } else {
+                (marker as any).setMap(null);
+            }
+        });
+        infoWindowsRef.current.forEach(infoWindow => infoWindow.close());
+        markersRef.current = [];
+        infoWindowsRef.current = [];
+
         if (incidents.length === 0) {
-            setMarkers([]);
+            console.log('⚠️ No incidents to display on map');
             return;
         }
 
         // Create new markers
-        const newMarkers = incidents.map(incident => {
-            const marker = new google.maps.Marker({
-                position: { lat: incident.lat, lng: incident.lng },
-                map,
-                title: incident.location,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: incident.severity === 'Severe' ? '#DC2626' :
-                        incident.severity === 'Moderate' ? '#F59E0B' : '#10B981',
-                    fillOpacity: 0.8,
-                    strokeColor: '#FFFFFF',
-                    strokeWeight: 2,
-                },
-            });
+        const newMarkers = incidents.map((incident, index) => {
+            const severityColor = incident.severity === 'Severe' ? '#DC2626' :
+                                 incident.severity === 'Moderate' ? '#F59E0B' : '#10B981';
 
-            // Add click listener
-            marker.addListener('click', () => {
-                if (onMarkerClick) {
-                    onMarkerClick(incident);
-                }
+            if (useAdvancedMarkers) {
+                // Use AdvancedMarkerElement with custom pin element
+                const pinElement = document.createElement('div');
+                pinElement.style.width = '20px';
+                pinElement.style.height = '20px';
+                pinElement.style.borderRadius = '50%';
+                pinElement.style.backgroundColor = severityColor;
+                pinElement.style.border = '3px solid white';
+                pinElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                pinElement.style.cursor = 'pointer';
 
-                // Show info window
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    map,
+                    position: { lat: incident.lat, lng: incident.lng },
+                    title: incident.location,
+                    content: pinElement,
+                });
+
+                // Create info window
                 const infoWindow = new google.maps.InfoWindow({
                     content: `
-            <div style="padding: 8px; font-family: Inter, sans-serif;">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #2D2424;">
-                ${incident.location}
-              </h3>
-              <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">
-                <strong>Severity:</strong> 
-                <span style="color: ${incident.severity === 'Severe' ? '#DC2626' :
-                            incident.severity === 'Moderate' ? '#F59E0B' : '#10B981'}">
-                  ${incident.severity}
-                </span>
-              </p>
-              <p style="margin: 0; font-size: 12px; color: #999;">
-                ${incident.date}
-              </p>
-            </div>
-          `,
+                        <div style="padding: 8px; font-family: Inter, sans-serif;">
+                            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #2D2424;">
+                                ${incident.location}
+                            </h3>
+                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">
+                                <strong>Severity:</strong> 
+                                <span style="color: ${severityColor}">
+                                    ${incident.severity}
+                                </span>
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #999;">
+                                ${incident.date}
+                            </p>
+                        </div>
+                    `,
                 });
-                infoWindow.open(map, marker);
-            });
 
-            return marker;
+                // Add click listener - for AdvancedMarkerElement, use click event on pin element
+                pinElement.addEventListener('click', () => {
+                    if (onMarkerClick) {
+                        onMarkerClick(incident);
+                    }
+                    // Close other info windows
+                    infoWindowsRef.current.forEach(iw => iw.close());
+                    // Show this info window
+                    infoWindow.open({
+                        anchor: marker,
+                        map,
+                    });
+                });
+
+                infoWindowsRef.current.push(infoWindow);
+                return marker;
+            } else {
+                // Fallback to old Marker API
+                const marker = new google.maps.Marker({
+                    position: { lat: incident.lat, lng: incident.lng },
+                    map,
+                    title: incident.location,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: severityColor,
+                        fillOpacity: 0.8,
+                        strokeColor: '#FFFFFF',
+                        strokeWeight: 2,
+                    },
+                });
+
+                // Create info window
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <div style="padding: 8px; font-family: Inter, sans-serif;">
+                            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #2D2424;">
+                                ${incident.location}
+                            </h3>
+                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">
+                                <strong>Severity:</strong> 
+                                <span style="color: ${severityColor}">
+                                    ${incident.severity}
+                                </span>
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #999;">
+                                ${incident.date}
+                            </p>
+                        </div>
+                    `,
+                });
+
+                // Add click listener - for legacy Marker API
+                marker.addListener('click', () => {
+                    if (onMarkerClick) {
+                        onMarkerClick(incident);
+                    }
+                    // Close other info windows
+                    infoWindowsRef.current.forEach(iw => iw.close());
+                    // Show this info window - legacy API uses different signature
+                    infoWindow.open({
+                        anchor: marker,
+                        map,
+                    });
+                });
+
+                infoWindowsRef.current.push(infoWindow);
+                return marker as any; // Type assertion for compatibility
+            }
         });
 
-        setMarkers(newMarkers);
+        markersRef.current = newMarkers;
+        console.log(`✅ Added ${newMarkers.length} markers to map`);
     }, [map, incidents, onMarkerClick]);
 
-    // Show loading state
-    if (isLoading) {
-        return (
-            <div className="w-full h-full bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#8B4513] border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-sm text-[#2D2424]/60">Loading map...</p>
-                </div>
-            </div>
-        );
-    }
-
     // Show error state
-    if (error) {
+    if (error && !map) {
         return (
             <div className="w-full h-full bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl flex items-center justify-center">
                 <div className="text-center p-8">
@@ -295,7 +398,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         <p className="text-xs text-yellow-800 mb-2"><strong>To enable Google Maps:</strong></p>
                         <ol className="text-xs text-yellow-700 space-y-1 ml-4">
                             <li>1. Get a Google Maps API key from Google Cloud Console</li>
-                            <li>2. Replace 'YOUR_API_KEY_HERE' in MapComponent.tsx</li>
+                            <li>2. Add it to your .env file as VITE_GOOGLE_MAPS_API_KEY</li>
                             <li>3. Refresh the page</li>
                         </ol>
                     </div>
@@ -306,7 +409,18 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
     return (
         <div className="relative w-full h-full rounded-2xl overflow-hidden">
+            {/* Always render map container so ref is available */}
             <div ref={mapRef} className="w-full h-full" />
+
+            {/* Loading overlay */}
+            {isLoading && (
+                <div className="absolute inset-0 bg-gradient-to-br from-[#8AB17D]/20 to-[#E9C46A]/20 rounded-2xl flex items-center justify-center z-10">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#8B4513] border-t-transparent mx-auto mb-4"></div>
+                        <p className="text-sm text-[#2D2424]/60">Loading map...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Map Controls Overlay */}
             <div className="absolute top-4 right-4 flex flex-col gap-2">

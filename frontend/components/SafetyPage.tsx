@@ -66,7 +66,7 @@ const SafetyPage: React.FC = () => {
                         </div>
 
                         {/* Map Component */}
-                        <div className="rounded-2xl overflow-hidden border-2 border-gray-100 mb-6">
+                        <div className="rounded-2xl overflow-hidden border-2 border-gray-100 mb-6 h-96 md:h-[500px]">
                             <MapComponent />
                         </div>
 
