@@ -7,18 +7,17 @@
 
   <!-- SECURITY: Content Security Policy to prevent XSS attacks -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
-                 script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh https://maps.googleapis.com; 
+                 script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh https://maps.googleapis.com https://www.googletagmanager.com; 
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
                  img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://firebasestorage.googleapis.com https://images.unsplash.com; 
                  font-src 'self' https://fonts.gstatic.com; 
-                 connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://nominatim.openstreetmap.org;
+                 connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://nominatim.openstreetmap.org https://www.google-analytics.com;
                  frame-src 'none';
                  object-src 'none';
                  base-uri 'self';">
 
   <!-- SECURITY: Additional security headers -->
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">

@@ -160,11 +160,7 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
             // Check for recent incidents
             const recent = await checkRecentIncidents(lat, lng, 0.5, 48);
             setRecentIncidents(recent);
-        } catch (error) {
-            console.warn('Could not check recent incidents:', error);
-        }
 
-        try {
             // Check for duplicate
             const { auth } = await import('../lib/firebase');
             const user = auth.currentUser;
@@ -174,17 +170,12 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                     setDuplicateWarning(duplicate.existingReport);
                 }
             }
-        } catch (error) {
-            console.warn('Could not check for duplicates:', error);
-            // Continue without duplicate check if index doesn't exist
-        }
 
-        try {
             // Get nearby hospitals
             const hospitals = await getNearbyHospitals(lat, lng, 5);
             setNearbyHospitals(hospitals);
         } catch (error) {
-            console.warn('Could not fetch nearby hospitals:', error);
+            console.error('Error performing validations:', error);
         }
     };
 

@@ -116,10 +116,11 @@ export const submitIncident = async (
             photoURLs.push(url);
         }
 
-        // Create incident document - only include defined fields
-        const incidentData: any = {
+        // Create incident document with all enhanced fields
+        const incidentData: Omit<IncidentReport, 'id'> = {
             userId: incident.userId,
             userName: incident.userName,
+            userPhone: incident.userPhone,
             location: {
                 address: incident.location.address,
                 coordinates: new GeoPoint(incident.location.lat, incident.location.lng),
@@ -132,23 +133,30 @@ export const submitIncident = async (
             status: 'Reported',
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
-        };
 
-        // Only add optional fields if they have values (Firestore doesn't allow undefined)
-        if (incident.userPhone) incidentData.userPhone = incident.userPhone;
-        if (incident.incidentDateTime) incidentData.incidentDateTime = incident.incidentDateTime;
-        if (incident.victimAge) incidentData.victimAge = incident.victimAge;
-        if (incident.injuryLocation) incidentData.injuryLocation = incident.injuryLocation;
-        if (incident.medicalAttention !== undefined) incidentData.medicalAttention = incident.medicalAttention;
-        if (incident.hospitalName) incidentData.hospitalName = incident.hospitalName;
-        if (incident.activity) incidentData.activity = incident.activity;
-        if (incident.provocation) incidentData.provocation = incident.provocation;
-        if (incident.witnessPresent !== undefined) incidentData.witnessPresent = incident.witnessPresent;
-        if (incident.witnessContact) incidentData.witnessContact = incident.witnessContact;
-        if (incident.rabiesConcern !== undefined) incidentData.rabiesConcern = incident.rabiesConcern;
-        if (incident.repeatOffender !== undefined) incidentData.repeatOffender = incident.repeatOffender;
-        if (incident.childrenAtRisk !== undefined) incidentData.childrenAtRisk = incident.childrenAtRisk;
-        if (incident.reportMode) incidentData.reportMode = incident.reportMode;
+            // Enhanced fields - Time & Date
+            incidentDateTime: incident.incidentDateTime,
+
+            // Enhanced fields - Victim Information
+            victimAge: incident.victimAge,
+            injuryLocation: incident.injuryLocation,
+            medicalAttention: incident.medicalAttention,
+            hospitalName: incident.hospitalName,
+
+            // Enhanced fields - Incident Context
+            activity: incident.activity,
+            provocation: incident.provocation,
+            witnessPresent: incident.witnessPresent,
+            witnessContact: incident.witnessContact,
+
+            // Enhanced fields - Priority Indicators
+            rabiesConcern: incident.rabiesConcern,
+            repeatOffender: incident.repeatOffender,
+            childrenAtRisk: incident.childrenAtRisk,
+
+            // Enhanced fields - Report Mode
+            reportMode: incident.reportMode,
+        };
 
         // Add to Firestore
         const docRef = await addDoc(collection(db, 'incidents'), incidentData);
