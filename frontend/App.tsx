@@ -76,7 +76,16 @@ const App: React.FC = () => {
   };
 
   // Handle logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Import and call Firebase logout
+      const { logout } = await import('./services/authService');
+      await logout();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+    // These will be handled by the onAuthChange listener
+    // but we can set them immediately for better UX
     setIsAuthenticated(false);
     setUserRole(null);
     setView('landing');
