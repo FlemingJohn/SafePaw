@@ -121,9 +121,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           </div>
           <div className="flex items-center gap-3">
             <Bell size={20} className="text-[#2D2424]/60" />
-            <div className="w-8 h-8 rounded-full bg-[#E9C46A] border-2 border-white shadow-sm flex items-center justify-center text-sm font-bold">
-              U
-            </div>
+            <button
+              onClick={onExit}
+              className="flex items-center gap-1 text-[#2D2424]/60 hover:text-[#2D2424] transition-colors p-2"
+              title="Sign Out"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
@@ -149,9 +153,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           onClick={() => setCurrentPage('home')}
         />
         <MobileNavItem
-          icon={<Map size={22} />}
-          active={currentPage === 'heatmap'}
-          onClick={() => setCurrentPage('heatmap')}
+          icon={<Shield size={22} />}
+          active={currentPage === 'safety'}
+          onClick={() => setCurrentPage('safety')}
         />
         <div className="relative -top-6">
           <motion.button
@@ -163,9 +167,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onExit }) => {
           </motion.button>
         </div>
         <MobileNavItem
-          icon={<AlertTriangle size={22} />}
-          active={currentPage === 'emergency'}
-          onClick={() => setCurrentPage('emergency')}
+          icon={<Scale size={22} />}
+          active={currentPage === 'legal'}
+          onClick={() => setCurrentPage('legal')}
         />
         <MobileNavItem
           icon={<FileText size={22} />}
