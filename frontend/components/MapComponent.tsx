@@ -112,38 +112,103 @@ const MapComponent: React.FC<MapComponentProps> = ({
         };
     }, [propIncidents]);
 
-    // Fetch hospitals (optional)
+    // Fetch hospitals using Google Places API
     useEffect(() => {
-        if (!showHospitals || hospitalsFetchedRef.current) return;
+        if (!showHospitals || hospitalsFetchedRef.current || !map) return;
         hospitalsFetchedRef.current = true;
 
-        const fetchHospitals = async () => {
-            console.log('🏥 MapComponent: Fetching hospitals...');
+        const fetchHospitalsFromGoogle = async () => {
+            console.log('🏥 MapComponent: Fetching hospitals from Google Places API...');
             try {
-                // We use incidentService's helper
+                const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+                // Get user's actual location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            const userLat = position.coords.latitude;
+                            const userLng = position.coords.longitude;
+                            console.log(`📍 User location: ${userLat}, ${userLng}`);
+
+                            // Use Google Places API Nearby Search
+                            const service = new window.google.maps.places.PlacesService(map);
+
+                            const request = {
+                                location: new window.google.maps.LatLng(userLat, userLng),
+                                radius: 10000, // 10km radius
+                                type: 'hospital',
+                                keyword: 'hospital emergency rabies'
+                            };
+
+                            service.nearbySearch(request, (results: any, status: any) => {
+                                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+                                    console.log(`✅ Found ${results.length} hospitals from Google Places`);
+
+                                    const mappedHospitals: IncidentMarker[] = results.map((place: any) => ({
+                                        id: `google-${place.place_id}`,
+                                        lat: place.geometry.location.lat(),
+                                        lng: place.geometry.location.lng(),
+                                        severity: 'Minor' as const,
+                                        location: place.name,
+                                        date: 'Emergency Service',
+                                        description: `${place.vicinity || place.formatted_address || 'Address not available'}\n${place.rating ? `Rating: ${place.rating}⭐` : ''}\n${place.user_ratings_total ? `(${place.user_ratings_total} reviews)` : ''}`,
+                                        type: 'hospital' as const
+                                    }));
+
+                                    setHospitals(mappedHospitals);
+                                    console.log(`✅ Loaded ${mappedHospitals.length} hospitals near user from Google`);
+                                } else {
+                                    console.warn('⚠️ Google Places API returned no results:', status);
+                                    // Fallback to static hospitals
+                                    loadStaticHospitals(userLat, userLng);
+                                }
+                            });
+                        },
+                        async (error) => {
+                            console.warn('⚠️ Geolocation failed, using Chennai as fallback:', error);
+                            // Fallback to Chennai coordinates
+                            loadStaticHospitals(13.0827, 80.2707);
+                        }
+                    );
+                } else {
+                    // No geolocation support, use Chennai
+                    console.warn('⚠️ No geolocation support, using Chennai');
+                    loadStaticHospitals(13.0827, 80.2707);
+                }
+            } catch (err) {
+                console.error('❌ Error fetching hospitals from Google:', err);
+                // Fallback to static data
+                loadStaticHospitals(13.0827, 80.2707);
+            }
+        };
+
+        // Fallback function to load static hospitals
+        const loadStaticHospitals = async (lat: number, lng: number) => {
+            console.log('📋 Loading fallback static hospitals...');
+            try {
                 const { getNearbyHospitals } = await import('../services/incidentService');
-                const hospitalData = await getNearbyHospitals(initialCenter.lat, initialCenter.lng);
+                const hospitalData = await getNearbyHospitals(lat, lng, 50);
 
                 const mappedHospitals: IncidentMarker[] = hospitalData.map(h => ({
                     id: h.id,
                     lat: h.location.lat,
                     lng: h.location.lng,
-                    severity: 'Minor', // Not applicable to hospitals but type-safe
+                    severity: 'Minor' as const,
                     location: h.name,
                     date: 'Emergency Service',
                     description: h.address + '\nPhone: ' + h.phone,
-                    type: 'hospital'
+                    type: 'hospital' as const
                 }));
 
                 setHospitals(mappedHospitals);
-                console.log(`✅ Loaded ${mappedHospitals.length} hospitals`);
+                console.log(`✅ Loaded ${mappedHospitals.length} static hospitals`);
             } catch (err) {
-                console.error('❌ Error fetching hospitals:', err);
+                console.error('❌ Error loading static hospitals:', err);
             }
         };
 
-        fetchHospitals();
-    }, [showHospitals, initialCenter]);
+        fetchHospitalsFromGoogle();
+    }, [showHospitals, map]);
 
     // Initialize Map Script
     useEffect(() => {
@@ -217,24 +282,96 @@ const MapComponent: React.FC<MapComponentProps> = ({
         allMarkers.forEach(incident => {
             if (markersRef.current.has(incident.id)) return;
 
-            let color = '#ef4444'; // Red for Severe
+            let iconSvg: string;
+
             if (incident.type === 'hospital') {
-                color = '#2563eb'; // Blue for Hospitals
+                // Hospital marker - red location pin with medical cross
+                iconSvg = `
+                    <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                                <feOffset dx="0" dy="2" result="offsetblur"/>
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.3"/>
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Pin shape -->
+                        <path d="M20 0C11.163 0 4 7.163 4 16c0 12 16 30 16 30s16-18 16-30c0-8.837-7.163-16-16-16z" 
+                              fill="#DC2626" stroke="#991B1B" stroke-width="2" filter="url(#shadow)"/>
+                        <!-- White circle background for cross -->
+                        <circle cx="20" cy="16" r="10" fill="white"/>
+                        <!-- Medical cross -->
+                        <path d="M20 10v12M14 16h12" stroke="#DC2626" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                `.trim();
             } else {
-                color = incident.severity === 'Severe' ? '#ef4444' : incident.severity === 'Moderate' ? '#f59e0b' : '#10b981';
+                // Dog paw marker with severity-based color
+                let color = '#10b981'; // Green for Minor
+                let strokeColor = '#059669';
+
+                if (incident.severity === 'Severe') {
+                    color = '#ef4444'; // Red
+                    strokeColor = '#dc2626';
+                } else if (incident.severity === 'Moderate') {
+                    color = '#f59e0b'; // Orange
+                    strokeColor = '#d97706';
+                }
+
+                iconSvg = `
+                    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="paw-shadow-${incident.id}" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+                                <feOffset dx="0" dy="1" result="offsetblur"/>
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.4"/>
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Background circle -->
+                        <circle cx="18" cy="18" r="17" fill="white" stroke="${strokeColor}" stroke-width="2" filter="url(#paw-shadow-${incident.id})"/>
+                        <!-- Dog paw print -->
+                        <g transform="translate(18, 18)" fill="${color}">
+                            <!-- Main pad (center) -->
+                            <ellipse cx="0" cy="2" rx="5" ry="6"/>
+                            <!-- Top left toe -->
+                            <ellipse cx="-5" cy="-4" rx="3" ry="4" transform="rotate(-15 -5 -4)"/>
+                            <!-- Top middle toe -->
+                            <ellipse cx="0" cy="-6" rx="3" ry="4"/>
+                            <!-- Top right toe -->
+                            <ellipse cx="5" cy="-4" rx="3" ry="4" transform="rotate(15 5 -4)"/>
+                            <!-- Bottom toe -->
+                            <ellipse cx="0" cy="8" rx="2.5" ry="3"/>
+                        </g>
+                    </svg>
+                `.trim();
             }
+
+            // Convert SVG to data URL
+            const iconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(iconSvg);
 
             const marker = new window.google.maps.Marker({
                 position: { lat: incident.lat, lng: incident.lng },
                 map,
                 title: incident.location,
                 icon: {
-                    path: window.google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: color,
-                    fillOpacity: 0.9,
-                    strokeWeight: 2,
-                    strokeColor: '#ffffff'
+                    url: iconUrl,
+                    scaledSize: incident.type === 'hospital'
+                        ? new window.google.maps.Size(40, 50)
+                        : new window.google.maps.Size(36, 36),
+                    anchor: incident.type === 'hospital'
+                        ? new window.google.maps.Point(20, 50) // Bottom center of pin
+                        : new window.google.maps.Point(18, 18) // Center of circle
                 },
                 animation: window.google.maps.Animation.DROP
             });
@@ -242,12 +379,24 @@ const MapComponent: React.FC<MapComponentProps> = ({
             marker.addListener('click', () => {
                 if (onMarkerClick) onMarkerClick(incident);
 
+                let displaySeverity = incident.severity;
+                let severityColor = '#10b981';
+
+                if (incident.type === 'hospital') {
+                    displaySeverity = 'Hospital';
+                    severityColor = '#DC2626';
+                } else if (incident.severity === 'Severe') {
+                    severityColor = '#ef4444';
+                } else if (incident.severity === 'Moderate') {
+                    severityColor = '#f59e0b';
+                }
+
                 const contentString = `
                     <div style="padding: 12px; min-width: 200px;">
                         <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #1e293b;">${incident.location}</div>
                         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
-                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></span>
-                            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${color};">${incident.severity}</span>
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${severityColor};"></span>
+                            <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${severityColor};">${displaySeverity}</span>
                         </div>
                         <div style="font-size: 12px; color: #64748b; line-height: 1.4;">${incident.description}</div>
                         <div style="margin-top: 8px; font-size: 10px; color: #94a3b8;">${incident.date}</div>
