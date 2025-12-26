@@ -212,7 +212,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF4] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#FDFBF4] flex items-center justify-center p-3 sm:p-4">
             <div className="w-full max-w-md">
                 <AnimatePresence mode="wait">
                     {view === 'login' && (
@@ -221,22 +221,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100"
+                            className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl border border-gray-100"
                         >
                             {/* Logo */}
-                            <div className="text-center mb-8">
-                                <div className="bg-[#8B4513] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <Shield className="text-white" size={32} />
+                            <div className="text-center mb-6 sm:mb-8">
+                                <div className="bg-[#8B4513] w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                    <Shield className="text-white" size={28} />
                                 </div>
-                                <h1 className="text-3xl font-bold text-[#2D2424]">Welcome Back</h1>
-                                <p className="text-[#2D2424]/60 mt-2">Sign in to SafePaw</p>
+                                <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2424]">Welcome Back</h1>
+                                <p className="text-sm sm:text-base text-[#2D2424]/60 mt-1 sm:mt-2">Sign in to SafePaw</p>
 
                                 {USE_MOCK_AUTH && (
-                                    <div className="mt-4 p-4 bg-[#FFF8E7] border-2 border-[#E9C46A] rounded-xl text-sm text-left">
+                                    <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-[#FFF8E7] border-2 border-[#E9C46A] rounded-xl text-xs sm:text-sm text-left">
                                         <p className="font-bold text-[#8B4513] mb-2">
                                             Mock Login (Testing Mode)
                                         </p>
-                                        <div className="space-y-1 text-[#2D2424]">
+                                        <div className="space-y-1 text-[#2D2424] text-xs sm:text-sm">
                                             <p><strong>Citizen:</strong> citizen@test.com</p>
                                             <p><strong>Government:</strong> govt@test.com</p>
                                             <p className="text-[#8B4513] text-xs mt-2">Password: test123</p>
@@ -300,7 +300,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-[#8B4513] text-white py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full bg-[#8B4513] text-white py-3 sm:py-3.5 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
                                 >
                                     {loading ? 'Signing in...' : 'Sign In'}
                                     {!loading && <ArrowRight size={20} />}
@@ -308,18 +308,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSuccess }) => {
                             </form>
 
                             {/* Signup Links */}
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                                <p className="text-center text-sm text-[#2D2424]/60 mb-4">Don't have an account?</p>
-                                <div className="grid grid-cols-2 gap-3">
+                            <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-gray-200">
+                                <p className="text-center text-xs sm:text-sm text-[#2D2424]/60 mb-3 sm:mb-4">Don't have an account?</p>
+                                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                     <button
                                         onClick={() => setView('signup-citizen')}
-                                        className="py-2 border-2 border-[#8B4513] text-[#8B4513] rounded-xl font-semibold hover:bg-[#8B4513] hover:text-white transition-colors text-sm"
+                                        className="py-2.5 sm:py-3 border-2 border-[#8B4513] text-[#8B4513] rounded-xl font-semibold hover:bg-[#8B4513] hover:text-white transition-colors text-xs sm:text-sm min-h-[44px]"
                                     >
                                         Citizen Signup
                                     </button>
                                     <button
                                         onClick={() => setView('signup-government')}
-                                        className="py-2 border-2 border-[#8B4513] text-[#8B4513] rounded-xl font-semibold hover:bg-[#8B4513] hover:text-white transition-colors text-sm"
+                                        className="py-2.5 sm:py-3 border-2 border-[#8B4513] text-[#8B4513] rounded-xl font-semibold hover:bg-[#8B4513] hover:text-white transition-colors text-xs sm:text-sm min-h-[44px]"
                                     >
                                         Govt Signup
                                     </button>
@@ -370,14 +370,14 @@ const CitizenSignupForm: React.FC<any> = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100"
+        className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl border border-gray-100"
     >
-        <div className="text-center mb-6">
-            <div className="bg-[#8B4513] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <User className="text-white" size={32} />
+        <div className="text-center mb-5 sm:mb-6">
+            <div className="bg-[#8B4513] w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <User className="text-white" size={28} />
             </div>
-            <h1 className="text-2xl font-bold text-[#2D2424]">Citizen Signup</h1>
-            <p className="text-[#2D2424]/60 mt-1 text-sm">Create your SafePaw account</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#2D2424]">Citizen Signup</h1>
+            <p className="text-[#2D2424]/60 mt-1 text-xs sm:text-sm">Create your SafePaw account</p>
         </div>
 
         {error && (
@@ -392,7 +392,7 @@ const CitizenSignupForm: React.FC<any> = ({
             </div>
         )}
 
-        <form onSubmit={onSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={onSubmit} className="space-y-3 sm:space-y-4 max-h-[65vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
             <InputField
                 icon={<User size={20} />}
                 label="Full Name"
@@ -403,7 +403,7 @@ const CitizenSignupForm: React.FC<any> = ({
                 required
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <InputField
                     icon={<User size={20} />}
                     label="Age"
@@ -424,7 +424,7 @@ const CitizenSignupForm: React.FC<any> = ({
                                 key={gender}
                                 type="button"
                                 onClick={() => setData({ ...data, gender })}
-                                className={`py-2 rounded-xl font-semibold text-xs transition-colors ${data.gender === gender
+                                className={`py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-colors min-h-[44px] ${data.gender === gender
                                     ? 'bg-[#8B4513] text-white'
                                     : 'border-2 border-gray-200 text-[#2D2424] hover:border-[#8B4513]'
                                     }`}
@@ -510,7 +510,7 @@ const CitizenSignupForm: React.FC<any> = ({
             <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#8B4513] text-white py-3 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors disabled:opacity-50 mt-6"
+                className="w-full bg-[#8B4513] text-white py-3 sm:py-3.5 rounded-xl font-semibold hover:bg-[#6D3610] transition-colors disabled:opacity-50 mt-5 sm:mt-6 min-h-[48px]"
             >
                 {loading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -518,7 +518,7 @@ const CitizenSignupForm: React.FC<any> = ({
             <button
                 type="button"
                 onClick={onBack}
-                className="w-full py-3 text-[#2D2424]/60 hover:text-[#2D2424] transition-colors text-sm"
+                className="w-full py-3 text-[#2D2424]/60 hover:text-[#2D2424] transition-colors text-xs sm:text-sm min-h-[44px]"
             >
                 Already have an account? Sign In
             </button>

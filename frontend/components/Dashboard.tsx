@@ -395,7 +395,7 @@ const ReportPage: React.FC = () => {
         </motion.div>
       )}
 
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 space-y-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-gray-100 space-y-4 sm:space-y-5 md:space-y-6">
         {/* Location */}
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-2">Location</label>
@@ -419,7 +419,7 @@ const ReportPage: React.FC = () => {
         {/* Dog Type */}
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-3">Dog Type</label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
               onClick={() => setDogType('Stray')}
               className={`border-2 font-semibold py-3 rounded-xl transition-colors ${dogType === 'Stray'
@@ -444,7 +444,7 @@ const ReportPage: React.FC = () => {
         {/* Severity */}
         <div>
           <label className="block text-sm font-semibold text-[#2D2424] mb-3">Severity Level</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <button
               onClick={() => setSeverity('Minor')}
               className={`border-2 py-3 rounded-xl transition-colors ${severity === 'Minor'
@@ -789,7 +789,7 @@ const LegalPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-semibold text-[#2D2424] mb-2">Injury Severity</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <button
                 onClick={() => setSeverity('Minor')}
                 className={`py-3 rounded-xl font-semibold text-sm transition-colors ${severity === 'Minor' ? 'bg-[#8AB17D] text-white' : 'bg-white border-2 border-gray-200'}`}
