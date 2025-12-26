@@ -488,7 +488,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md border border-slate-200 flex items-center gap-2">
                         <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                            <span className="text-xs font-bold text-slate-800 tracking-tight">LIVE MONITOR</span>
+                            <span className="text-xs font-bold text-slate-800 tracking-tight">INCIDENT TRACKER</span>
                         </div>
                         <div className="h-4 w-px bg-slate-200" />
                         <span className="text-xs text-slate-500">{incidents.length} events detected</span>
