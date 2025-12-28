@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Navigation,
@@ -21,6 +21,9 @@ import {
     getNearbyHospitals,
     type Hospital
 } from '../services/incidentService';
+import AIRealtimeSuggestions from './AIRealtimeSuggestions';
+import { fetchRealtimeSuggestions } from '../services/realtimeSuggestionService';
+import type { AISuggestion } from '../types/suggestion.types';
 
 interface EnhancedReportPageProps {
     onSuccess?: () => void;
@@ -65,9 +68,66 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
     const [nearbyHospitals, setNearbyHospitals] = useState<Hospital[]>([]);
     const [showValidation, setShowValidation] = useState(false);
 
+    // AI Suggestions State
+    const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Form State
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    // Fetch AI suggestions with debouncing
+    const fetchSuggestions = useCallback(async () => {
+        if (!severity && !coordinates) {
+            // Need at least severity or location to get suggestions
+            return;
+        }
+
+        setLoadingSuggestions(true);
+
+        try {
+            const { suggestions } = await fetchRealtimeSuggestions({
+                severity,
+                location: coordinates ? {
+                    lat: coordinates.lat,
+                    lng: coordinates.lng,
+                    address: location
+                } : undefined,
+                dogType,
+                rabiesConcern,
+                repeatOffender,
+                childrenAtRisk
+            });
+
+            setAiSuggestions(suggestions);
+        } catch (error) {
+            console.error('Error fetching AI suggestions:', error);
+            // Silently fail - don't block the form
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    }, [severity, coordinates, location, dogType, rabiesConcern, repeatOffender, childrenAtRisk]);
+
+    // Debounced trigger for AI suggestions
+    useEffect(() => {
+        // Clear existing timeout
+        if (suggestionTimeoutRef.current) {
+            clearTimeout(suggestionTimeoutRef.current);
+        }
+
+        // Set new timeout (500ms debounce)
+        suggestionTimeoutRef.current = setTimeout(() => {
+            fetchSuggestions();
+        }, 500);
+
+        // Cleanup
+        return () => {
+            if (suggestionTimeoutRef.current) {
+                clearTimeout(suggestionTimeoutRef.current);
+            }
+        };
+    }, [fetchSuggestions]);
 
     // Auto-detect location with reverse geocoding
     const detectLocation = () => {
@@ -320,6 +380,9 @@ const EnhancedReportPage: React.FC<EnhancedReportPageProps> = ({ onSuccess }) =>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* AI Real-Time Suggestions */}
+            <AIRealtimeSuggestions suggestions={aiSuggestions} loading={loadingSuggestions} />
 
             {/* Duplicate Warning */}
             <AnimatePresence>

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -6,6 +7,8 @@ import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 import { coordinateMultiAgentResponse, processDelayedIncidents } from './services/orchestrator';
 import { contactGovernmentAgents } from './services/contactService';
+import { generateRealtimeSuggestions, getRecentIncidentsCount } from './services/realtimeSuggestions';
+import { sendTestNotification } from './services/notificationService';
 
 // Initialize Firebase Admin
 initializeApp();
@@ -222,3 +225,119 @@ exports.searchNearbyHospitals = onRequest(
         }
     }
 );
+
+/**
+ * Cloud Function: Test Notification System
+ * Send test SMS or email to verify Twilio/Gmail configuration
+ * SECURITY: Development/testing only
+ */
+exports.testNotification = onRequest(
+    {
+        cors: true,
+        maxInstances: 5,
+        timeoutSeconds: 15,
+        memory: '256MiB'
+    },
+    async (req, res) => {
+        try {
+            const { method, recipient } = req.body;
+
+            if (!method || !recipient) {
+                res.status(400).json({
+                    error: 'Missing required fields',
+                    message: 'Please provide both "method" (sms|email) and "recipient"'
+                });
+                return;
+            }
+
+            if (method !== 'sms' && method !== 'email') {
+                res.status(400).json({
+                    error: 'Invalid method',
+                    message: 'Method must be either "sms" or "email"'
+                });
+                return;
+            }
+
+            console.log(`📧 Sending test ${method} to ${recipient}...`);
+
+            const success = await sendTestNotification(method, recipient);
+
+            if (success) {
+                res.json({
+                    success: true,
+                    message: `Test ${method} sent successfully to ${recipient}`,
+                    method,
+                    recipient
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: `Failed to send test ${method}`,
+                    message: 'Check Firebase Functions logs for details'
+                });
+            }
+        } catch (error: any) {
+            console.error('❌ Test notification error:', error);
+            res.status(500).json({
+                error: 'Failed to send test notification',
+                message: error.message,
+                success: false
+            });
+        }
+    }
+);
+
+/**
+ * Cloud Function: Get Real-Time AI Suggestions
+ * Provides instant suggestions while user fills out incident report
+ * SECURITY: Rate limited to 30 requests per minute
+ */
+exports.getRealtimeSuggestions = onRequest(
+    {
+        cors: true,  // Configure allowed origins in Firebase Console
+        maxInstances: 20,
+        timeoutSeconds: 10,
+        memory: '256MiB'
+    },
+    async (req, res) => {
+        try {
+            const startTime = Date.now();
+            const { severity, location, dogType, rabiesConcern, repeatOffender, childrenAtRisk } = req.body;
+
+            // Get recent incidents count if location provided
+            let recentIncidents = 0;
+            if (location?.lat && location?.lng) {
+                recentIncidents = await getRecentIncidentsCount(location.lat, location.lng, 0.5, 48);
+            }
+
+            // Generate suggestions
+            const { suggestions, cached } = await generateRealtimeSuggestions(ai, {
+                severity,
+                location,
+                dogType,
+                rabiesConcern,
+                repeatOffender,
+                childrenAtRisk,
+                recentIncidents
+            });
+
+            const processingTime = Date.now() - startTime;
+
+            res.json({
+                success: true,
+                suggestions,
+                processingTime,
+                cached,
+                message: `Generated ${suggestions.length} suggestions`
+            });
+        } catch (error: any) {
+            console.error('❌ Error generating real-time suggestions:', error);
+            res.status(500).json({
+                error: 'Failed to generate suggestions',
+                message: error.message,
+                success: false
+            });
+        }
+    }
+);
+

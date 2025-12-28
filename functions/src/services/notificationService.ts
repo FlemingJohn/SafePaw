@@ -1,5 +1,4 @@
 import * as twilio from 'twilio';
-import * as nodemailer from 'nodemailer';
 import type { NotificationData } from '../types';
 
 // Initialize Twilio client
@@ -7,18 +6,25 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
     ? twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     : null;
 
-// Initialize email transporter
-const emailTransporter = process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
-    ? nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT || '587'),
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD,
-        },
-    })
-    : null;
+
+/**
+ * Get priority emoji based on severity and priority score
+ */
+function getPriorityEmoji(severity: string, priority: number): string {
+    if (severity === 'Severe' || priority >= 9) return '🔴';
+    if (severity === 'Moderate' || priority >= 7) return '🟠';
+    return '🟡';
+}
+
+/**
+ * Get urgency level text
+ */
+function getUrgencyLevel(priority: number): string {
+    if (priority >= 9) return 'CRITICAL';
+    if (priority >= 7) return 'HIGH';
+    if (priority >= 4) return 'MEDIUM';
+    return 'LOW';
+}
 
 /**
  * Send SMS notification to government agent
@@ -33,13 +39,17 @@ export async function sendSMS(
     }
 
     try {
-        const message = `🚨 SAFEPAW ALERT\n\n` +
-            `Incident ID: ${data.incidentId}\n` +
+        const emoji = getPriorityEmoji(data.severity, data.priority);
+        const urgency = getUrgencyLevel(data.priority);
+
+        const message = `${emoji} SAFEPAW ${urgency} ALERT\n\n` +
+            `ID: ${data.incidentId.substring(0, 8)}\n` +
             `Severity: ${data.severity}\n` +
             `Priority: ${data.priority}/10\n` +
             `Location: ${data.location}\n` +
-            `Delayed: ${data.hoursSinceLastAction} hours\n\n` +
-            `Action required immediately.`;
+            `Delayed: ${Math.round(data.hoursSinceLastAction)}h\n\n` +
+            `⚡ IMMEDIATE ACTION REQUIRED\n` +
+            `View: safepaw.app/i/${data.incidentId.substring(0, 8)}`;
 
         await twilioClient.messages.create({
             body: message,
@@ -57,61 +67,34 @@ export async function sendSMS(
 
 /**
  * Send email notification to government agent
+ * NOTE: Email notifications are disabled - using SMS only
  */
 export async function sendEmail(
     email: string,
     data: NotificationData
 ): Promise<boolean> {
-    if (!emailTransporter) {
-        console.warn('⚠️ Email not configured, skipping email');
-        return false;
-    }
+    console.warn('⚠️ Email notifications are disabled - using SMS only');
+    return false;
+}
 
-    try {
-        const htmlContent = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #d32f2f;">🚨 SafePaw Incident Alert</h2>
-                <div style="background: #fff3e0; padding: 20px; border-left: 4px solid #ff9800;">
-                    <h3>Escalated Incident Requires Immediate Attention</h3>
-                    <table style="width: 100%; margin-top: 15px;">
-                        <tr>
-                            <td style="padding: 8px; font-weight: bold;">Incident ID:</td>
-                            <td style="padding: 8px;">${data.incidentId}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; font-weight: bold;">Severity:</td>
-                            <td style="padding: 8px;"><span style="color: ${data.severity === 'Severe' ? '#d32f2f' : '#ff9800'};">${data.severity}</span></td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; font-weight: bold;">Priority:</td>
-                            <td style="padding: 8px;">${data.priority}/10</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; font-weight: bold;">Location:</td>
-                            <td style="padding: 8px;">${data.location}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; font-weight: bold;">Time Delayed:</td>
-                            <td style="padding: 8px;"><strong>${data.hoursSinceLastAction} hours</strong></td>
-                        </tr>
-                    </table>
-                </div>
-                <p style="margin-top: 20px;">This incident has been automatically escalated due to inaction. Please review and take appropriate action immediately.</p>
-                <a href="https://safepaw.app/incidents/${data.incidentId}" style="display: inline-block; margin-top: 15px; padding: 12px 24px; background: #1976d2; color: white; text-decoration: none; border-radius: 4px;">View Incident Details</a>
-            </div>
-        `;
+/**
+ * Send test notification (for testing purposes)
+ */
+export async function sendTestNotification(
+    method: 'sms' | 'email',
+    recipient: string
+): Promise<boolean> {
+    const testData: NotificationData = {
+        incidentId: 'TEST_' + Date.now(),
+        severity: 'Severe',
+        location: 'Test Location, Chennai',
+        hoursSinceLastAction: 25,
+        priority: 9,
+    };
 
-        await emailTransporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: `🚨 SafePaw Alert: Escalated ${data.severity} Incident - ${data.incidentId}`,
-            html: htmlContent,
-        });
-
-        console.log(`✅ Email sent to ${email}`);
-        return true;
-    } catch (error: any) {
-        console.error(`❌ Email error for ${email}:`, error.message);
-        return false;
+    if (method === 'sms') {
+        return await sendSMS(recipient, testData);
+    } else {
+        return await sendEmail(recipient, testData);
     }
 }

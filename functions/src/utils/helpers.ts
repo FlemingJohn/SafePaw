@@ -1,6 +1,12 @@
 import { getFirestore } from 'firebase-admin/firestore';
 
-const db = getFirestore();
+/**
+ * Get Firestore instance (lazy initialization)
+ * This prevents initialization order issues
+ */
+function getDb() {
+    return getFirestore();
+}
 
 // ============================================
 // PRIORITY CALCULATION
@@ -38,7 +44,7 @@ export function calculateTimeUrgency(createdAt: Date): number {
  * Check if incident is delayed (>24 hours with no action)
  */
 export async function isIncidentDelayed(incidentId: string): Promise<boolean> {
-    const incidentRef = db.collection('incidents').doc(incidentId);
+    const incidentRef = getDb().collection('incidents').doc(incidentId);
     const incident = await incidentRef.get();
 
     if (!incident.exists) return false;
@@ -67,7 +73,7 @@ export function calculateHoursSinceAction(lastActionDate: Date): number {
  * Get available government agents in jurisdiction
  */
 export async function getAvailableAgents(location?: any): Promise<any[]> {
-    const agentsRef = db.collection('governmentAgents');
+    const agentsRef = getDb().collection('governmentAgents');
     const snapshot = await agentsRef
         .where('availability', '==', 'on_duty')
         .get();
@@ -83,7 +89,7 @@ export async function getAvailableResources(
     types?: string[],
     limit: number = 5
 ): Promise<any[]> {
-    const resourcesRef = db.collection('governmentResources');
+    const resourcesRef = getDb().collection('governmentResources');
     let query = resourcesRef.where('availability', '==', 'available');
 
     if (types && types.length > 0) {
