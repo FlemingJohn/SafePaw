@@ -62,10 +62,10 @@ export default function loadGoogleMaps(
         };
 
         if (existingScript) {
-            console.debug('loadGoogleMaps: existing script found, readyState=', existingScript.readyState);
+            console.debug('loadGoogleMaps: existing script found');
 
             // If the script has already loaded and google is present, resolve
-            if ((existingScript.getAttribute('data-loaded') === 'true' || existingScript.readyState === 'complete' || existingScript.readyState === 'loaded') && w.google && w.google.maps) {
+            if (existingScript.getAttribute('data-loaded') === 'true' && w.google && w.google.maps) {
                 onLoaded();
                 return;
             }
@@ -84,7 +84,7 @@ export default function loadGoogleMaps(
         } else {
             const script = document.createElement('script');
             createdScript = script;
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(',')}`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
             script.async = true;
             script.defer = true;
             script.onload = () => {

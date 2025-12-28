@@ -112,102 +112,80 @@ const MapComponent: React.FC<MapComponentProps> = ({
         };
     }, [propIncidents]);
 
-    // Fetch hospitals using Google Places API
+    // Fetch hospitals dynamically based on viewport (Option 1: Viewport-based loading)
     useEffect(() => {
-        if (!showHospitals || hospitalsFetchedRef.current || !map) return;
-        hospitalsFetchedRef.current = true;
+        if (!showHospitals || !map) return;
 
-        const fetchHospitalsFromGoogle = async () => {
-            console.log('🏥 MapComponent: Fetching hospitals from Google Places API...');
-            try {
-                const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        let debounceTimer: NodeJS.Timeout;
 
-                // Get user's actual location
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        async (position) => {
-                            const userLat = position.coords.latitude;
-                            const userLng = position.coords.longitude;
-                            console.log(`📍 User location: ${userLat}, ${userLng}`);
+        const fetchHospitalsInViewport = () => {
+            // Debounce to avoid too many API calls while dragging
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                console.log('🏥 Fetching hospitals for current viewport...');
 
-                            // Use Google Places API Nearby Search
-                            const service = new window.google.maps.places.PlacesService(map);
+                const bounds = map.getBounds();
+                if (!bounds) return;
 
-                            const request = {
-                                location: new window.google.maps.LatLng(userLat, userLng),
-                                radius: 10000, // 10km radius
-                                type: 'hospital',
-                                keyword: 'hospital emergency rabies'
-                            };
+                const center = bounds.getCenter();
+                const ne = bounds.getNorthEast();
 
-                            service.nearbySearch(request, (results: any, status: any) => {
-                                if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-                                    console.log(`✅ Found ${results.length} hospitals from Google Places`);
+                // Calculate radius from center to corner (in meters)
+                const radius = window.google.maps.geometry.spherical.computeDistanceBetween(
+                    center,
+                    ne
+                );
 
-                                    const mappedHospitals: IncidentMarker[] = results.map((place: any) => ({
-                                        id: `google-${place.place_id}`,
-                                        lat: place.geometry.location.lat(),
-                                        lng: place.geometry.location.lng(),
-                                        severity: 'Minor' as const,
-                                        location: place.name,
-                                        date: 'Emergency Service',
-                                        description: `${place.vicinity || place.formatted_address || 'Address not available'}\n${place.rating ? `Rating: ${place.rating}⭐` : ''}\n${place.user_ratings_total ? `(${place.user_ratings_total} reviews)` : ''}`,
-                                        type: 'hospital' as const
-                                    }));
+                console.log(`📍 Viewport center: ${center.lat()}, ${center.lng()}, radius: ${Math.round(radius)}m`);
 
-                                    setHospitals(mappedHospitals);
-                                    console.log(`✅ Loaded ${mappedHospitals.length} hospitals near user from Google`);
-                                } else {
-                                    console.warn('⚠️ Google Places API returned no results:', status);
-                                    // Fallback to static hospitals
-                                    loadStaticHospitals(userLat, userLng);
-                                }
-                            });
-                        },
-                        async (error) => {
-                            console.warn('⚠️ Geolocation failed, using Chennai as fallback:', error);
-                            // Fallback to Chennai coordinates
-                            loadStaticHospitals(13.0827, 80.2707);
-                        }
-                    );
-                } else {
-                    // No geolocation support, use Chennai
-                    console.warn('⚠️ No geolocation support, using Chennai');
-                    loadStaticHospitals(13.0827, 80.2707);
-                }
-            } catch (err) {
-                console.error('❌ Error fetching hospitals from Google:', err);
-                // Fallback to static data
-                loadStaticHospitals(13.0827, 80.2707);
-            }
+                // Use Google Places API for the visible area
+                const service = new window.google.maps.places.PlacesService(map);
+
+                const request = {
+                    location: center,
+                    radius: Math.min(radius, 50000), // Max 50km radius for better results
+                    type: 'hospital',
+                    keyword: 'hospital emergency'
+                };
+
+                service.nearbySearch(request, (results: any, status: any) => {
+                    if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+                        console.log(`✅ Found ${results.length} hospitals in viewport`);
+
+                        const mappedHospitals: IncidentMarker[] = results.map((place: any) => ({
+                            id: `google-${place.place_id}`,
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng(),
+                            severity: 'Minor' as const,
+                            location: place.name,
+                            date: 'Emergency Service',
+                            description: `${place.vicinity || place.formatted_address || 'Address not available'}\n${place.rating ? `Rating: ${place.rating}⭐` : ''}\n${place.user_ratings_total ? `(${place.user_ratings_total} reviews)` : ''}`,
+                            type: 'hospital' as const
+                        }));
+
+                        setHospitals(mappedHospitals);
+                    } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                        console.log('ℹ️ No hospitals found in this area');
+                        setHospitals([]);
+                    } else {
+                        console.warn('⚠️ Google Places API status:', status);
+                    }
+                });
+            }, 500); // 500ms debounce
         };
 
-        // Fallback function to load static hospitals
-        const loadStaticHospitals = async (lat: number, lng: number) => {
-            console.log('📋 Loading fallback static hospitals...');
-            try {
-                const { getNearbyHospitals } = await import('../services/incidentService');
-                const hospitalData = await getNearbyHospitals(lat, lng, 50);
+        // Initial fetch
+        fetchHospitalsInViewport();
 
-                const mappedHospitals: IncidentMarker[] = hospitalData.map(h => ({
-                    id: h.id,
-                    lat: h.location.lat,
-                    lng: h.location.lng,
-                    severity: 'Minor' as const,
-                    location: h.name,
-                    date: 'Emergency Service',
-                    description: h.address + '\nPhone: ' + h.phone,
-                    type: 'hospital' as const
-                }));
+        // Listen for map movements (pan/zoom)
+        const idleListener = map.addListener('idle', fetchHospitalsInViewport);
 
-                setHospitals(mappedHospitals);
-                console.log(`✅ Loaded ${mappedHospitals.length} static hospitals`);
-            } catch (err) {
-                console.error('❌ Error loading static hospitals:', err);
+        return () => {
+            clearTimeout(debounceTimer);
+            if (idleListener) {
+                window.google.maps.event.removeListener(idleListener);
             }
         };
-
-        fetchHospitalsFromGoogle();
     }, [showHospitals, map]);
 
     // Initialize Map Script
@@ -311,26 +289,36 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     </svg>
                 `.trim();
             } else {
-                // Dog paw marker with severity-based color
+                // Dog paw marker with severity-based color - IMPROVED DESIGN
                 let color = '#10b981'; // Green for Minor
                 let strokeColor = '#059669';
+                let darkColor = '#047857';
 
                 if (incident.severity === 'Severe') {
                     color = '#ef4444'; // Red
                     strokeColor = '#dc2626';
+                    darkColor = '#b91c1c';
                 } else if (incident.severity === 'Moderate') {
                     color = '#f59e0b'; // Orange
                     strokeColor = '#d97706';
+                    darkColor = '#b45309';
                 }
 
                 iconSvg = `
-                    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
                         <defs>
+                            <!-- Gradient for depth -->
+                            <linearGradient id="pawGradient-${incident.id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:${darkColor};stop-opacity:1" />
+                            </linearGradient>
+                            
+                            <!-- Enhanced shadow -->
                             <filter id="paw-shadow-${incident.id}" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
-                                <feOffset dx="0" dy="1" result="offsetblur"/>
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                                <feOffset dx="0" dy="2" result="offsetblur"/>
                                 <feComponentTransfer>
-                                    <feFuncA type="linear" slope="0.4"/>
+                                    <feFuncA type="linear" slope="0.5"/>
                                 </feComponentTransfer>
                                 <feMerge>
                                     <feMergeNode/>
@@ -338,21 +326,30 @@ const MapComponent: React.FC<MapComponentProps> = ({
                                 </feMerge>
                             </filter>
                         </defs>
-                        <!-- Background circle -->
-                        <circle cx="18" cy="18" r="17" fill="white" stroke="${strokeColor}" stroke-width="2" filter="url(#paw-shadow-${incident.id})"/>
-                        <!-- Dog paw print -->
-                        <g transform="translate(18, 18)" fill="${color}">
-                            <!-- Main pad (center) -->
-                            <ellipse cx="0" cy="2" rx="5" ry="6"/>
-                            <!-- Top left toe -->
-                            <ellipse cx="-5" cy="-4" rx="3" ry="4" transform="rotate(-15 -5 -4)"/>
+                        
+                        <!-- White background circle with border -->
+                        <circle cx="20" cy="20" r="18" fill="white" stroke="${strokeColor}" stroke-width="2.5" filter="url(#paw-shadow-${incident.id})"/>
+                        
+                        <!-- Dog paw print with gradient -->
+                        <g transform="translate(20, 20)">
+                            <!-- Main pad (center) - larger and more rounded -->
+                            <ellipse cx="0" cy="3" rx="6" ry="7.5" fill="url(#pawGradient-${incident.id})"/>
+                            
+                            <!-- Top left toe - improved shape -->
+                            <ellipse cx="-6" cy="-5" rx="3.5" ry="5" fill="url(#pawGradient-${incident.id})" transform="rotate(-20 -6 -5)"/>
+                            
                             <!-- Top middle toe -->
-                            <ellipse cx="0" cy="-6" rx="3" ry="4"/>
-                            <!-- Top right toe -->
-                            <ellipse cx="5" cy="-4" rx="3" ry="4" transform="rotate(15 5 -4)"/>
-                            <!-- Bottom toe -->
-                            <ellipse cx="0" cy="8" rx="2.5" ry="3"/>
+                            <ellipse cx="0" cy="-7" rx="3.5" ry="5.5" fill="url(#pawGradient-${incident.id})"/>
+                            
+                            <!-- Top right toe - improved shape -->
+                            <ellipse cx="6" cy="-5" rx="3.5" ry="5" fill="url(#pawGradient-${incident.id})" transform="rotate(20 6 -5)"/>
+                            
+                            <!-- Bottom pad - smaller and rounder -->
+                            <ellipse cx="0" cy="10" rx="3" ry="3.5" fill="url(#pawGradient-${incident.id})"/>
                         </g>
+                        
+                        <!-- Subtle outer glow for visibility -->
+                        <circle cx="20" cy="20" r="18" fill="none" stroke="${color}" stroke-width="1" opacity="0.3"/>
                     </svg>
                 `.trim();
             }
@@ -368,10 +365,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     url: iconUrl,
                     scaledSize: incident.type === 'hospital'
                         ? new window.google.maps.Size(40, 50)
-                        : new window.google.maps.Size(36, 36),
+                        : new window.google.maps.Size(40, 40), // Increased from 36x36
                     anchor: incident.type === 'hospital'
                         ? new window.google.maps.Point(20, 50) // Bottom center of pin
-                        : new window.google.maps.Point(18, 18) // Center of circle
+                        : new window.google.maps.Point(20, 20) // Center of circle
                 },
                 animation: window.google.maps.Animation.DROP
             });
