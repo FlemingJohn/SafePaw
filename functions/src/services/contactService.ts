@@ -1,6 +1,6 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import type { NotificationData } from '../types';
-import { sendSMS, sendEmail } from './notificationService';
+import { sendSMS, sendEmail, sendSlack } from './notificationService';
 import { calculateHoursSinceAction } from '../utils/helpers';
 
 const db = getFirestore();
@@ -77,6 +77,11 @@ export async function contactGovernmentAgents(
             } else {
                 failed++;
             }
+        }
+
+        // Send to Slack (System Channel) if severity is high or critical
+        if (incidentData.severity === 'Severe' || (incidentData.priority && incidentData.priority >= 7)) {
+            await sendSlack(notificationData).catch(err => console.error('Error sending slack alert:', err));
         }
 
         // Update incident with contacted agents

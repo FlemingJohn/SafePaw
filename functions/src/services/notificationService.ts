@@ -1,6 +1,19 @@
 import * as twilio from 'twilio';
-import type { NotificationData } from '../types';
+import * as nodemailer from 'nodemailer';
+import { NotificationData } from '../types';
 
+// Initialize Nodemailer transporter
+const emailTransporter = process.env.EMAIL_HOST && process.env.EMAIL_USER
+    ? nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT) || 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    })
+    : null;
 // Initialize Twilio client
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
     ? twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -14,6 +27,16 @@ function getPriorityEmoji(severity: string, priority: number): string {
     if (severity === 'Severe' || priority >= 9) return '🔴';
     if (severity === 'Moderate' || priority >= 7) return '🟠';
     return '🟡';
+}
+
+/**
+ * Get color for Slack/Mail based on priority
+ */
+function getPriorityColor(priority: number): string {
+    if (priority >= 9) return '#FF0000'; // Red
+    if (priority >= 7) return '#FFA500'; // Orange
+    return '#FFFF00'; // Yellow
+
 }
 
 /**
@@ -73,15 +96,132 @@ export async function sendEmail(
     email: string,
     data: NotificationData
 ): Promise<boolean> {
-    console.warn('⚠️ Email notifications are disabled - using SMS only');
-    return false;
+    if (!emailTransporter || !process.env.EMAIL_USER) {
+        console.warn('⚠️ Email not configured, skipping email');
+        return false;
+    }
+
+    try {
+        const urgency = getUrgencyLevel(data.priority);
+        const subject = `[SAFEPAW] ${urgency} Incident Alert: ${data.incidentId}`;
+
+        const html = `
+            <h2>⚠️ ${urgency} Incident Alert</h2>
+            <p><strong>Incident ID:</strong> ${data.incidentId}</p>
+            <p><strong>Severity:</strong> ${data.severity}</p>
+            <p><strong>Priority:</strong> ${data.priority}/10</p>
+            <p><strong>Location:</strong> ${data.location}</p>
+            <p><strong>Delayed:</strong> ${Math.round(data.hoursSinceLastAction)} hours</p>
+            <br>
+            <p><a href="https://safepaw.app/i/${data.incidentId}">View Incident Details</a></p>
+        `;
+
+        await emailTransporter.sendMail({
+            from: `"SafePaw Alert" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: subject,
+            html: html,
+        });
+
+        console.log(`✅ Email sent to ${email}`);
+        return true;
+    } catch (error: any) {
+        console.error(`❌ Email error for ${email}:`, error.message);
+        return false;
+    }
+}
+
+/**
+ * Send Slack notification via Webhook
+ */
+export async function sendSlack(
+    data: NotificationData
+): Promise<boolean> {
+    if (!process.env.SLACK_WEBHOOK_URL) {
+        console.warn('⚠️ Slack Webhook not configured, skipping Slack');
+        return false;
+    }
+
+    try {
+        const emoji = getPriorityEmoji(data.severity, data.priority);
+        const urgency = getUrgencyLevel(data.priority);
+        const color = getPriorityColor(data.priority);
+
+        const payload = {
+            username: 'SafePaw Bot',
+            icon_emoji: ':dog2:',
+            attachments: [{
+                color: color,
+                blocks: [
+                    {
+                        type: 'header',
+                        text: {
+                            type: 'plain_text',
+                            text: `${emoji} ${urgency} ALERT: ${data.severity} Incident`
+                        }
+                    },
+                    {
+                        type: 'section',
+                        fields: [
+                            {
+                                type: 'mrkdwn',
+                                text: `*ID:*\n${data.incidentId}`
+                            },
+                            {
+                                type: 'mrkdwn',
+                                text: `*Priority:*\n${data.priority}/10`
+                            },
+                            {
+                                type: 'mrkdwn',
+                                text: `*Location:*\n${data.location}`
+                            },
+                            {
+                                type: 'mrkdwn',
+                                text: `*Delayed:*\n${Math.round(data.hoursSinceLastAction)}h`
+                            }
+                        ]
+                    },
+                    {
+                        type: 'actions',
+                        elements: [
+                            {
+                                type: 'button',
+                                text: {
+                                    type: 'plain_text',
+                                    text: 'View Incident'
+                                },
+                                url: `https://safepaw.app/i/${data.incidentId}`,
+                                style: 'danger'
+                            }
+                        ]
+                    }
+                ]
+            }]
+        };
+
+        const response = await fetch(process.env.SLACK_WEBHOOK_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Slack API error: ${response.statusText}`);
+        }
+
+        console.log('✅ Slack notification sent');
+        return true;
+    } catch (error: any) {
+        console.error('❌ Slack error:', error.message);
+        return false;
+    }
 }
 
 /**
  * Send test notification (for testing purposes)
  */
 export async function sendTestNotification(
-    method: 'sms' | 'email',
+    method: 'sms' | 'email' | 'slack',
     recipient: string
 ): Promise<boolean> {
     const testData: NotificationData = {
@@ -94,6 +234,8 @@ export async function sendTestNotification(
 
     if (method === 'sms') {
         return await sendSMS(recipient, testData);
+    } else if (method === 'slack') {
+        return await sendSlack(testData);
     } else {
         return await sendEmail(recipient, testData);
     }

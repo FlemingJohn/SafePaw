@@ -250,10 +250,10 @@ exports.testNotification = onRequest(
                 return;
             }
 
-            if (method !== 'sms' && method !== 'email') {
+            if (method !== 'sms' && method !== 'email' && method !== 'slack') {
                 res.status(400).json({
                     error: 'Invalid method',
-                    message: 'Method must be either "sms" or "email"'
+                    message: 'Method must be either "sms", "email" or "slack"'
                 });
                 return;
             }
