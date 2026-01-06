@@ -7,6 +7,7 @@
  * Usage:
  *   node testNotifications.js sms +1234567890
  *   node testNotifications.js email test@example.com
+ *   node testNotifications.js slack general
  */
 
 const https = require('https');
@@ -73,8 +74,8 @@ async function main() {
     const method = args[0];
     const recipient = args[1];
 
-    if (method !== 'sms' && method !== 'email') {
-        console.error('Error: Method must be "sms" or "email"');
+    if (method !== 'sms' && method !== 'email' && method !== 'slack') {
+        console.error('Error: Method must be "sms", "email", or "slack"');
         process.exit(1);
     }
 
